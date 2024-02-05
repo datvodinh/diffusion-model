@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "diffusion-model"
+version = "0.1.0"
+description = ""
+authors = ["Võ Đình Đạt <vodinhdat03@gmail.com>"]
+readme = "README.md"
+packages = [
+    { include = "diffusion", from = "." },
+    { include = "ldm", from = "." },
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+torch = "^2.2.0"
+lightning = "^2.1.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
