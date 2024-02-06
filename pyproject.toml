@@ -1,13 +1,9 @@
 [tool.poetry]
-name = "diffusion-model"
+name = "diffusion"
 version = "0.1.0"
 description = ""
 authors = ["Võ Đình Đạt <vodinhdat03@gmail.com>"]
 readme = "README.md"
-packages = [
-    { include = "diffusion", from = "." },
-    { include = "ldm", from = "." },
-]
 
 [tool.poetry.dependencies]
 python = "^3.11"
