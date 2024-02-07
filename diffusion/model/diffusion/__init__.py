@@ -1,3 +1,3 @@
-from .diffusion import *
+from .forward import *
 from .unet import *
 from .model import *
