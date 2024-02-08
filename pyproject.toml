@@ -10,6 +10,8 @@ python = "^3.11"
 torch = "^2.2.0"
 lightning = "^2.1.4"
 einops = "^0.7.0"
+torchvision = "^0.17.0"
+wandb = "^0.16.3"
 
 [build-system]
 requires = ["poetry-core"]

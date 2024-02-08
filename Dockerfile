@@ -5,4 +5,4 @@ WORKDIR /app
 
 RUN pip install .
 
-CMD ["python", "app.py"]
+CMD ["python", "-m", "diffusion.train"]
