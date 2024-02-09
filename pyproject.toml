@@ -6,7 +6,7 @@ authors = ["Võ Đình Đạt <vodinhdat03@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 torch = "^2.2.0"
 lightning = "^2.1.4"
 einops = "^0.7.0"
