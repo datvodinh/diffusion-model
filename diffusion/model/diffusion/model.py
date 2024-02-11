@@ -13,12 +13,11 @@ class DiffusionModel(pl.LightningModule):
         beta_1: float = 0.0001,
         beta_2: float = 0.02,
         in_channels: int = 3,
-        dim: int = 32,
-        time_dim: int = 256
+        dim: int = 32
     ):
         super().__init__()
         self.model = diffusion.UNet(
-            time_dim=time_dim, c_in=in_channels, c_out=in_channels
+            dim=dim, in_channels=in_channels
         )
         self.lr = lr
         self.max_timesteps = max_timesteps
