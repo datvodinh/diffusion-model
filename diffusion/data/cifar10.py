@@ -21,6 +21,7 @@ class CIFAR10DataModule(pl.LightningDataModule):
         self.seed = seed
         self.transform = transforms.Compose(
             [
+                transforms.Resize((64, 64)),
                 transforms.ToTensor()
             ]
         )

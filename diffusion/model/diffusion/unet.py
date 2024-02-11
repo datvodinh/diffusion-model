@@ -115,9 +115,8 @@ class Up(nn.Module):
 
 
 class UNet(nn.Module):
-    def __init__(self, c_in=3, c_out=3, time_dim=256, device="cuda"):
+    def __init__(self, c_in=3, c_out=3, time_dim=256):
         super().__init__()
-        self.device = device
         self.time_dim = time_dim
         self.inc = DoubleConv(c_in, 64)
         self.down1 = Down(64, 128)
@@ -127,9 +126,9 @@ class UNet(nn.Module):
         self.down3 = Down(256, 256)
         self.sa3 = SelfAttention(256, 8)
 
-        self.bot1 = DoubleConv(256, 512)
-        self.bot2 = DoubleConv(512, 512)
-        self.bot3 = DoubleConv(512, 256)
+        self.mid1 = DoubleConv(256, 512)
+        self.mid2 = DoubleConv(512, 512)
+        self.mid3 = DoubleConv(512, 256)
 
         self.up1 = Up(512, 128)
         self.sa4 = SelfAttention(128, 16)
@@ -142,7 +141,7 @@ class UNet(nn.Module):
     def pos_encoding(self, t, channels):
         inv_freq = 1.0 / (
             10000
-            ** (torch.arange(0, channels, 2, device=self.device).float() / channels)
+            ** (torch.arange(0, channels, 2).float().to(t.device) / channels)
         )
         pos_enc_a = torch.sin(t.repeat(1, channels // 2) * inv_freq)
         pos_enc_b = torch.cos(t.repeat(1, channels // 2) * inv_freq)
@@ -161,9 +160,9 @@ class UNet(nn.Module):
         x4 = self.down3(x3, t)
         x4 = self.sa3(x4)
 
-        x4 = self.bot1(x4)
-        x4 = self.bot2(x4)
-        x4 = self.bot3(x4)
+        x4 = self.mid1(x4)
+        x4 = self.mid2(x4)
+        x4 = self.mid3(x4)
 
         x = self.up1(x4, x3, t)
         x = self.sa4(x)
@@ -174,11 +173,11 @@ class UNet(nn.Module):
         output = self.outc(x)
         return output
 
+
 if __name__ == '__main__':
-    # net = UNet(device="cpu")
-    net = UNet(device="cpu")
+    net = UNet()
     print(sum([p.numel() for p in net.parameters()]))
-    x = torch.randn(3, 3, 64, 64)
+    x = torch.randn(2, 3, 32, 32)
     t = x.new_tensor([500] * x.shape[0]).long()
-    y = x.new_tensor([1] * x.shape[0]).long()
+    print(t)
     print(net(x, t).shape)
