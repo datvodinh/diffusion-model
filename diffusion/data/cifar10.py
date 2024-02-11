@@ -26,8 +26,8 @@ class CIFAR10DataModule(pl.LightningDataModule):
         )
         self.loader = partial(
             DataLoader,
-            batch_size=self.batch_size, 
-            pin_memory=True, 
+            batch_size=self.batch_size,
+            pin_memory=True,
             num_workers=self.num_workers,
             persistent_workers=True
         )
@@ -36,7 +36,7 @@ class CIFAR10DataModule(pl.LightningDataModule):
         if stage == "fit":
             cifar_full = CIFAR10(root=self.data_dir, transform=self.transform, train=True, download=True)
             self.cifar_train, self.cifar_val = random_split(
-                cifar_full, [0.9, 0.1], generator=torch.Generator().manual_seed(self.seed)
+                cifar_full, [0.99, 0.01], generator=torch.Generator().manual_seed(self.seed)
             )
         elif stage == "test":
             self.cifar_test = CIFAR10(self.data_dir, train=False, transform=self.transform, download=True)
