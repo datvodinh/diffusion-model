@@ -2,7 +2,6 @@ import torch
 import pytorch_lightning as pl
 import diffusion
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 
 class DiffusionModel(pl.LightningModule):
@@ -72,7 +71,7 @@ class DiffusionModel(pl.LightningModule):
         print(f"Sampling {n} images!")
         x_t = torch.randn(n, self.in_channels, self.dim, self.dim, device=self.model.device)
         self.model.eval()
-        for t in tqdm(range(self.max_timesteps-1, -1, -1)):
+        for t in range(self.max_timesteps-1, -1, -1):
             time = torch.full((n,), fill_value=t, device=self.model.device)
             pred_noise = self.model(x_t, time)
             sqrt_alpha = self._batch_index_select(self.sqrt_alpha, time, device=self.model.device)
@@ -87,7 +86,7 @@ class DiffusionModel(pl.LightningModule):
                 x_t - (1-sqrt_alpha) / sqrt_one_minus_alpha_hat * pred_noise
             ) + sqrt_beta * noise
 
-        x_t = x_t.clamp(-1, 1) * 2 + 1  # range [0,1]
+        x_t = (x_t.clamp(-1, 1) + 1) / 2  # range [0,1]
         self.model.train()
         return x_t
 

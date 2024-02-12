@@ -84,7 +84,11 @@ def main():
 
     # CALLBACK
     root_path = os.path.join(os.getcwd(), "checkpoints")
-    callback = diffusion.ModelCallback(root_path=root_path)
+    callback = diffusion.ModelCallback(
+        root_path=root_path,
+        ckpt_monitor='val_loss',
+        es_monitor='val_loss'
+    )
 
     # TRAINER
     trainer = pl.Trainer(
