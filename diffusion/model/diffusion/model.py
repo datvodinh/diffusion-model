@@ -92,11 +92,16 @@ class DiffusionModel(pl.LightningModule):
         return x_t.type(torch.uint8)
 
     def on_train_epoch_end(self) -> None:
-        x_t = self.sampling(5).cpu().permute(0, 2, 3, 1)
+        x_t = self.sampling(5).cpu()
         img_array = [x_t[i] for i in range(x_t.shape[0])]
-        self.log_dict(
+        print(make_grid(img_array).shape)
+        wandblog = self.logger.experiment
+        wandblog.log(
             {
-                "sampling": wandb.Image(make_grid(img_array), caption="Sampled Image!")
+                "sampling": wandb.Image(
+                    make_grid(img_array).permute(1, 2, 0).numpy(),
+                    caption="Sampled Image!"
+                )
             }
         )
 
