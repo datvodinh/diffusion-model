@@ -87,9 +87,9 @@ class DiffusionModel(pl.LightningModule):
                 x_t - (1-sqrt_alpha) / sqrt_one_minus_alpha_hat * pred_noise
             ) + sqrt_beta * noise
 
-        x_t = (x_t.clamp(-1, 1) + 1) / 2  # range [0,1]
+        x_t = (x_t.clamp(-1, 1) + 1) / 2 * 255.  # range [0,255]
         self.model.train()
-        return x_t
+        return x_t.type(torch.uint8)
 
     def on_train_epoch_end(self) -> None:
         x_t = self.sampling(5).cpu().permute(0, 2, 3, 1)
