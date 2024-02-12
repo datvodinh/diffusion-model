@@ -2,6 +2,7 @@ import torch
 import pytorch_lightning as pl
 import diffusion
 import wandb
+from torchvision.utils import make_grid
 
 
 class DiffusionModel(pl.LightningModule):
@@ -91,12 +92,13 @@ class DiffusionModel(pl.LightningModule):
         return x_t
 
     def on_train_epoch_end(self) -> None:
-        x_t = self.sampling(10).cpu().permute(0, 2, 3, 1).numpy()
-        img_dict = {}
-        for i in range(10):
-            img_dict[f'img{i}'] = wandb.Image(x_t[i], caption=f'img{i}')
-
-        self.log_dict(img_dict, sync_dist=True)
+        x_t = self.sampling(5).cpu().permute(0, 2, 3, 1)
+        img_array = [x_t[i] for i in range(x_t.shape[0])]
+        self.log_dict(
+            {
+                "sampling": wandb.Image(make_grid(img_array), caption="Sampled Image!")
+            }
+        )
 
     def forward(self, x_0):
         t = torch.randint(
