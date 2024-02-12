@@ -21,6 +21,7 @@ class DiffusionModel(pl.LightningModule):
         )
         self.lr = lr
         self.max_timesteps = max_timesteps
+        self.in_channels = in_channels
         self.dim = dim
         self.beta = self._linear_scheduler(max_timesteps, beta_1, beta_2)
         self.sqrt_beta = torch.sqrt(self.beta)
@@ -64,7 +65,7 @@ class DiffusionModel(pl.LightningModule):
     @torch.no_grad()
     def sampling(self, n: int):
         print(f"Sampling {n} images!")
-        x_t = torch.randn(n, 3, self.dim, self.dim, device=self.device)
+        x_t = torch.randn(n, self.in_channels, self.dim, self.dim, device=self.device)
         self.model.eval()
         for t in tqdm(range(self.max_timesteps-1, -1, -1)):
             time = torch.full((n,), fill_value=t)
@@ -105,7 +106,8 @@ class DiffusionModel(pl.LightningModule):
         self.log_dict(
             {
                 "train_loss": loss
-            }
+            },
+            sync_dist=True
         )
         return loss
 
@@ -116,7 +118,8 @@ class DiffusionModel(pl.LightningModule):
         self.log_dict(
             {
                 "val_loss": loss
-            }
+            },
+            sync_dist=True
         )
         return loss
 
