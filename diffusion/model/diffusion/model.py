@@ -42,12 +42,13 @@ class DiffusionModel(pl.LightningModule):
     def _batch_index_select(
         self,
         x: torch.Tensor,
-        t: torch.Tensor
+        t: torch.Tensor,
+        device: torch.device
     ):
         # x.shape = [T,]
         # t.shape = [B,]
         x_select = x.gather(dim=-1, index=t)
-        return x_select.reshape(-1, 1, 1, 1)  # [B,1]
+        return x_select.reshape(-1, 1, 1, 1).to(device)  # [B,1]
 
     def noising(
         self,
@@ -68,12 +69,15 @@ class DiffusionModel(pl.LightningModule):
         x_t = torch.randn(n, self.in_channels, self.dim, self.dim, device=self.model.device)
         self.model.eval()
         for t in tqdm(range(self.max_timesteps-1, -1, -1)):
-            time = torch.full((n,), fill_value=t)
+            time = torch.full((n,), fill_value=t, device=self.model.device)
             pred_noise = self.model(x_t, time)
-            sqrt_alpha = self._batch_index_select(self.sqrt_alpha, time)
-            sqrt_one_minus_alpha_hat = self._batch_index_select(self.sqrt_1_minus_alpha_hat, time)
-            sqrt_beta = self._batch_index_select(self.sqrt_beta, time)
-            noise = torch.rand_like(x_t) if t > 0 else torch.zeros_like(x_t)
+            sqrt_alpha = self._batch_index_select(self.sqrt_alpha, time, device=self.model.device)
+            sqrt_one_minus_alpha_hat = self._batch_index_select(
+                self.sqrt_1_minus_alpha_hat, time, device=self.model.device)
+            sqrt_beta = self._batch_index_select(self.sqrt_beta, time, device=self.model.device)
+            noise = torch.rand_like(x_t, device=self.model.device) if (
+                t > 0
+            ) else torch.zeros_like(x_t, device=self.model.device)
 
             x_t = 1 / sqrt_alpha * (
                 x_t - (1-sqrt_alpha) / sqrt_one_minus_alpha_hat * pred_noise
@@ -84,11 +88,11 @@ class DiffusionModel(pl.LightningModule):
         return x_t
 
     def on_train_epoch_end(self) -> None:
-        x_t = self.sampling(16)
+        x_t = self.sampling(16).cpu()
         plt.figure(figsize=(12, 12))
         for i in range(16):
             plt.subplot(4, 4, i+1)
-            plt.imshow(x_t[i])
+            plt.imshow(x_t[i].permute(1, 2, 0))
             plt.axis('off')
 
     def forward(self, x_0):
