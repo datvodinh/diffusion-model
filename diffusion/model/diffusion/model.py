@@ -98,6 +98,8 @@ class DiffusionModel(pl.LightningModule):
             plt.imshow(x_t[i].permute(1, 2, 0))
             plt.axis('off')
 
+        plt.show()
+
     def forward(self, x_0):
         t = torch.randint(
             low=0, high=self.max_timesteps, size=(x_0.shape[0],), device=x_0.device
