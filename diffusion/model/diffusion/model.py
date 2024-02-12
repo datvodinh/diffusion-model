@@ -2,6 +2,7 @@ import torch
 import pytorch_lightning as pl
 import diffusion
 import matplotlib.pyplot as plt
+import wandb
 
 
 class DiffusionModel(pl.LightningModule):
@@ -91,14 +92,12 @@ class DiffusionModel(pl.LightningModule):
         return x_t
 
     def on_train_epoch_end(self) -> None:
-        x_t = self.sampling(16).cpu()
-        plt.figure(figsize=(12, 12))
-        for i in range(16):
-            plt.subplot(4, 4, i+1)
-            plt.imshow(x_t[i].permute(1, 2, 0))
-            plt.axis('off')
+        x_t = self.sampling(10).cpu().permute(2, 3, 1).numpy()
+        img_dict = {}
+        for i in range(10):
+            img_dict[f'img{i}'] = wandb.Image(x_t[i], caption=f'img{i}')
 
-        plt.show()
+        self.log_dict(img_dict, sync_dist=True)
 
     def forward(self, x_0):
         t = torch.randint(
