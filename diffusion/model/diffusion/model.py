@@ -53,6 +53,8 @@ class DiffusionModel(pl.LightningModule):
         x_0: torch.Tensor,
         t: torch.Tensor
     ):
+        if self.device is None:
+            self.device = x_0.device
         x_0 = x_0 * 2 - 1  # range [-1,1]
         noise = torch.randn_like(x_0, device=x_0.device)
         mean = self._batch_index_select(self.sqrt_alpha_hat.to(x_0.device), t) * x_0
@@ -62,7 +64,7 @@ class DiffusionModel(pl.LightningModule):
     @torch.no_grad()
     def sampling(self, n: int):
         print(f"Sampling {n} images!")
-        x_t = torch.randn(n, 3, self.dim, self.dim)
+        x_t = torch.randn(n, 3, self.dim, self.dim, device=self.device)
         self.model.eval()
         for t in tqdm(range(self.max_timesteps-1, -1, -1)):
             time = torch.full((n,), fill_value=t)
@@ -103,6 +105,17 @@ class DiffusionModel(pl.LightningModule):
         self.log_dict(
             {
                 "train_loss": loss
+            }
+        )
+        return loss
+
+    def validation_step(self, batch, idx):
+        x_0, _ = batch
+        noise, noise_pred = self(x_0)
+        loss = torch.mean((noise - noise_pred)**2)
+        self.log_dict(
+            {
+                "val_loss": loss
             }
         )
         return loss

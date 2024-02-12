@@ -13,7 +13,11 @@ def main():
     # PARSERs
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--data_dir', '-d', type=str, default='./',
+        '--dataset', '-d', type=str, default='mnist',
+        help='choose dataset'
+    )
+    parser.add_argument(
+        '--data_dir', '-dd', type=str, default='./',
         help='model name'
     )
     parser.add_argument(
@@ -63,7 +67,11 @@ def main():
         logger = None
 
     # DATAMODULE
-    cifar10 = diffusion.CIFAR10DataModule(
+    if args.dataset == "mnist":
+        DATAMODULE = diffusion.MNISTDataModule
+    elif args.dataset == "cifar10":
+        DATAMODULE = diffusion.CIFAR10DataModule
+    datamodule = DATAMODULE(
         data_dir=args.data_dir,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
@@ -71,7 +79,8 @@ def main():
     )
 
     # MODEL
-    model = diffusion.DiffusionModel(lr=args.lr)
+    in_channels = 1 if args.dataset == "mnist" else 3
+    model = diffusion.DiffusionModel(lr=args.lr, in_channels=in_channels)
 
     # CALLBACK
     root_path = os.path.join(os.getcwd(), "checkpoints")
@@ -89,7 +98,7 @@ def main():
     )
 
     # FIT MODEL
-    trainer.fit(model=model, datamodule=cifar10)
+    trainer.fit(model=model, datamodule=datamodule)
 
 
 if __name__ == '__main__':

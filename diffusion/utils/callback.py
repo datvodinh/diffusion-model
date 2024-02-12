@@ -7,7 +7,7 @@ class ModelCallback:
     def __init__(
         self,
         root_path: str,
-        ckpt_monitor: str = "loss",
+        ckpt_monitor: str = "val_loss",
         ckpt_mode: str = "min",
         es_monitor: str = "loss",
         es_mode: str = "min"

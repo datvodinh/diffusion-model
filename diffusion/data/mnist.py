@@ -1,12 +1,12 @@
 import pytorch_lightning as pl
 import torch
-from torchvision.datasets import CIFAR10
+from torchvision.datasets import MNIST
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
 from functools import partial
 
 
-class CIFAR10DataModule(pl.LightningDataModule):
+class MNISTDataModule(pl.LightningDataModule):
     def __init__(
         self,
         data_dir: str = "./",
@@ -35,14 +35,14 @@ class CIFAR10DataModule(pl.LightningDataModule):
 
     def setup(self, stage: str):
         if stage == "fit":
-            cifar_full = CIFAR10(root=self.data_dir, transform=self.transform, train=True, download=True)
+            cifar_full = MNIST(root=self.data_dir, transform=self.transform, train=True, download=True)
             self.cifar_train, self.cifar_val = random_split(
                 cifar_full, [0.99, 0.01], generator=torch.Generator().manual_seed(self.seed)
             )
         elif stage == "test":
-            self.cifar_test = CIFAR10(self.data_dir, train=False, transform=self.transform, download=True)
+            self.cifar_test = MNIST(self.data_dir, train=False, transform=self.transform, download=True)
         elif stage == "predict":
-            self.cifar_pred = CIFAR10(self.data_dir, train=False, transform=self.transform, download=True)
+            self.cifar_pred = MNIST(self.data_dir, train=False, transform=self.transform, download=True)
 
     def train_dataloader(self):
         return self.loader(dataset=self.cifar_train)
