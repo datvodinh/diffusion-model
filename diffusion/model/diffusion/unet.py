@@ -2,6 +2,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import pytorch_lightning as pl
 from einops.layers.torch import Rearrange
 from einops import rearrange, repeat
 
@@ -187,7 +188,7 @@ class FullAttention(nn.Module):
         return self.to_out(out)
 
 
-class UNet(nn.Module):
+class UNet(pl.LightningModule):
     def __init__(
         self,
         dim: int,

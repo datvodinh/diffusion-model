@@ -65,7 +65,7 @@ class DiffusionModel(pl.LightningModule):
     @torch.no_grad()
     def sampling(self, n: int):
         print(f"Sampling {n} images!")
-        x_t = torch.randn(n, self.in_channels, self.dim, self.dim, device=self.device)
+        x_t = torch.randn(n, self.in_channels, self.dim, self.dim, device=self.model.device)
         self.model.eval()
         for t in tqdm(range(self.max_timesteps-1, -1, -1)):
             time = torch.full((n,), fill_value=t)
@@ -80,7 +80,7 @@ class DiffusionModel(pl.LightningModule):
             ) + sqrt_beta * noise
 
         x_t = x_t.clamp(-1, 1) * 2 + 1  # range [0,1]
-
+        self.model.train()
         return x_t
 
     def on_train_epoch_end(self) -> None:
