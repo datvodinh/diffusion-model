@@ -47,8 +47,12 @@ class DiffusionModel(pl.LightningModule):
     ):
         # x.shape = [T,]
         # t.shape = [B,]
+        if x.device != device:
+            x = x.to(device)
+        if t.device != device:
+            t = t.to(device)
         x_select = x.gather(dim=-1, index=t)
-        return x_select.reshape(-1, 1, 1, 1).to(device)  # [B,1]
+        return x_select[:, None, None, None]  # [B,1]
 
     def noising(
         self,
@@ -59,8 +63,8 @@ class DiffusionModel(pl.LightningModule):
             self.device = x_0.device
         x_0 = x_0 * 2 - 1  # range [-1,1]
         noise = torch.randn_like(x_0, device=x_0.device)
-        mean = self._batch_index_select(self.sqrt_alpha_hat.to(x_0.device), t) * x_0
-        std = self._batch_index_select(self.sqrt_1_minus_alpha_hat.to(x_0.device), t) * noise
+        mean = self._batch_index_select(self.sqrt_alpha_hat, t, device=x_0.device) * x_0
+        std = self._batch_index_select(self.sqrt_1_minus_alpha_hat, t, device=x_0.device) * noise
         return torch.clamp(mean + std, min=-1, max=1), noise
 
     @torch.no_grad()
