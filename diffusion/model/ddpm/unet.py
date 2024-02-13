@@ -146,10 +146,11 @@ class UNet(pl.LightningModule):
         inv_freq = 1.0 / (
             10000
             ** (torch.arange(0, channels, 2).float().to(t.device) / channels)
-        )
-        pos_enc_a = torch.sin(t.repeat(1, channels // 2) * inv_freq)
-        pos_enc_b = torch.cos(t.repeat(1, channels // 2) * inv_freq)
-        pos_enc = torch.cat([pos_enc_a, pos_enc_b], dim=-1)
+        ) * t.repeat(1, channels // 2)
+
+        pos_enc = torch.zeros((t.shape[0], channels), device=t.device)
+        pos_enc[:, 0::2] = torch.sin(inv_freq)
+        pos_enc[:, 1::2] = torch.cos(inv_freq)
         return pos_enc
 
     def forward_unet(self, x, t):

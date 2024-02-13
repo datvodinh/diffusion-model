@@ -110,6 +110,9 @@ def main():
         es_monitor=args.monitor
     )
 
+    # STRATEGY
+    strategy = 'ddp_find_unused_parameters_true' if torch.cuda.is_available() else 'auto'
+
     # TRAINER
     trainer = pl.Trainer(
         default_root_dir=root_path,
@@ -120,7 +123,8 @@ def main():
         enable_progress_bar=args.pbar,
         deterministic=False,
         precision=args.precision,
-        strategy='ddp_find_unused_parameters_true'
+        strategy=strategy,
+        accumulate_grad_batches=max(int(256 / args.batch_size), 1)
     )
 
     # FIT MODEL
