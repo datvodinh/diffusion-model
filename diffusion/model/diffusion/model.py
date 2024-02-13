@@ -152,8 +152,7 @@ class DiffusionModel(pl.LightningModule):
         return {
             'optimizer': optimizer,
             'lr_scheduler': scheduler,
-            'monitor': 'val_loss',
-            'interval': 'epoch',
+            'monitor': 'val_loss'
         }
 
 

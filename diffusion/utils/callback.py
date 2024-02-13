@@ -39,13 +39,8 @@ class ModelCallback:
             mode=es_mode
         )
 
-        self.lr_finder = LearningRateFinder(
-            min_lr=1e-6,
-            max_lr=1e-2
-        )
-
     def get_callback(self):
         return [
             self.ckpt_callback, self.lr_callback,
-            self.early_stop_callback, self.lr_finder
+            self.early_stop_callback
         ]
