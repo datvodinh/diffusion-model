@@ -104,7 +104,7 @@ class DiffusionModel(pl.LightningModule):
         return x_t.type(torch.uint8)
 
     def on_train_epoch_end(self) -> None:
-        n = 10
+        n = 32
         labels = torch.randint(
             low=0, high=self.num_classes, size=(n,), device=self.model.device
         )
