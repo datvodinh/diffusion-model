@@ -1,5 +1,4 @@
 from pytorch_lightning.loggers import WandbLogger
-from lightning.pytorch.tuner import Tuner
 import diffusion
 import torch
 import wandb
@@ -101,15 +100,6 @@ def main():
         enable_progress_bar=False,
         deterministic=False
     )
-
-    # TUNER
-    tuner = Tuner(trainer)
-    tuner.lr_find(
-        model=model,
-        datamodule=datamodule,
-        early_stop_threshold=None
-    )
-    tuner.scale_batch_size(model=model, datamodule=datamodule)
 
     # FIT MODEL
     trainer.fit(model=model, datamodule=datamodule)
