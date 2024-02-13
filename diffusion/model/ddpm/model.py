@@ -17,7 +17,8 @@ class DiffusionModel(pl.LightningModule):
         beta_2: float = 0.02,
         in_channels: int = 3,
         dim: int = 32,
-        num_classes: int | None = 10
+        num_classes: int | None = 10,
+        sample_per_epochs: int = 50
     ):
         super().__init__()
         self.model = diffusion.ConditionalUNet(
@@ -39,6 +40,9 @@ class DiffusionModel(pl.LightningModule):
         self.sqrt_1_minus_alpha_hat = torch.sqrt(1 - self.alpha_hat)
 
         self.criterion = nn.MSELoss()
+
+        self.spe = sample_per_epochs
+        self.epoch_count = 0
 
     def _linear_scheduler(
         self,
@@ -75,7 +79,6 @@ class DiffusionModel(pl.LightningModule):
 
     @torch.no_grad()
     def sampling(self, n: int, labels: torch.Tensor, cfg_scale: int = 3):
-        print(f"Sampling {n} images!")
         x_t = torch.randn(
             n, self.in_channels, self.dim, self.dim, device=self.model.device
         )
@@ -104,22 +107,26 @@ class DiffusionModel(pl.LightningModule):
         return x_t.type(torch.uint8)
 
     def on_train_epoch_end(self) -> None:
-        n = 32
-        labels = torch.randint(
-            low=0, high=self.num_classes, size=(n,), device=self.model.device
-        )
-        x_t = self.sampling(n, labels).cpu()
+        if self.epoch_count % self.spe == 0:
+            n = 32
+            labels = torch.randint(
+                low=0, high=self.num_classes, size=(n,), device=self.model.device
+            )
+            x_t = self.sampling(n, labels).cpu()
 
-        img_array = [x_t[i] for i in range(x_t.shape[0])]
-        wandblog = self.logger.experiment
-        wandblog.log(
-            {
-                "sampling": wandb.Image(
-                    make_grid(img_array).permute(1, 2, 0).numpy(),
-                    caption="Sampled Image!"
-                )
-            }
-        )
+            img_array = [x_t[i] for i in range(x_t.shape[0])]
+            wandblog = self.logger.experiment
+            wandblog.log(
+                {
+                    "sampling": wandb.Image(
+                        make_grid(img_array).permute(1, 2, 0).numpy(),
+                        caption="Sampled Image!"
+                    )
+                },
+                step=self.epoch_count
+            )
+
+        self.epoch_count += 1
 
     def forward(self, x_0, labels):
         t = torch.randint(

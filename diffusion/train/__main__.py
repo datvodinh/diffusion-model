@@ -53,6 +53,14 @@ def main():
         help='numerical precision'
     )
     parser.add_argument(
+        '--sample_per_epochs', '-spe', type=int, default=25,
+        help='sample every n epochs'
+    )
+    parser.add_argument(
+        '--monitor', '-m', type=str, default='val_loss',
+        help='callbacks monitor'
+    )
+    parser.add_argument(
         '--wandb', '-wk', type=str, default=None,
         help='wandb API key'
     )
@@ -88,14 +96,18 @@ def main():
 
     # MODEL
     in_channels = 1 if args.dataset == "mnist" else 3
-    model = diffusion.DiffusionModel(lr=args.lr, in_channels=in_channels)
+    model = diffusion.DiffusionModel(
+        lr=args.lr,
+        in_channels=in_channels,
+        sample_per_epochs=args.sample_per_epochs
+    )
 
     # CALLBACK
     root_path = os.path.join(os.getcwd(), "checkpoints")
     callback = diffusion.ModelCallback(
         root_path=root_path,
-        ckpt_monitor='val_loss',
-        es_monitor='val_loss'
+        ckpt_monitor=args.monitor,
+        es_monitor=args.monitor
     )
 
     # TRAINER
