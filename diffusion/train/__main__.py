@@ -104,9 +104,13 @@ def main():
 
     # TUNER
     tuner = Tuner(trainer)
-    tuner.lr_find(model=model, datamodule=datamodule)
+    tuner.lr_find(
+        model=model,
+        datamodule=datamodule,
+        early_stop_threshold=None
+    )
     tuner.scale_batch_size(model=model, datamodule=datamodule)
-    
+
     # FIT MODEL
     trainer.fit(model=model, datamodule=datamodule)
 
