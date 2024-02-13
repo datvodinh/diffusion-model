@@ -55,6 +55,7 @@ class MNISTDataModule(pl.LightningDataModule):
             while retrying:
                 try:
                     self.cifar_test = cifar_partial(train=False)
+                    retrying = False
                 except:
                     pass
 
