@@ -19,7 +19,7 @@ class DiffusionModel(pl.LightningModule):
     ):
         super().__init__()
         self.model = diffusion.UNet(
-            dim=dim, in_channels=in_channels
+            c_in=in_channels, c_out=in_channels
         )
         self.lr = lr
         self.max_timesteps = max_timesteps

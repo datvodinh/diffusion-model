@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import pytorch_lightning as pl
 
 
 class SelfAttention(nn.Module):
@@ -113,7 +114,7 @@ class UpSample(nn.Module):
         return x + emb
 
 
-class UNet(nn.Module):
+class UNet(pl.LightningModule):
     def __init__(self, c_in=3, c_out=3, time_dim=256):
         super().__init__()
         self.time_dim = time_dim
