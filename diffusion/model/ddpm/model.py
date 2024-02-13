@@ -125,8 +125,7 @@ class DiffusionModel(pl.LightningModule):
                             make_grid(img_array).permute(1, 2, 0).numpy(),
                             caption="Sampled Image!"
                         )
-                    },
-                    step=self.epoch_count
+                    }
                 )
             except:
                 pass
@@ -171,13 +170,14 @@ class DiffusionModel(pl.LightningModule):
         optimizer = torch.optim.AdamW(
             params=self.parameters(),
             lr=self.lr,
+            weight_decay=0.1,
             betas=(0.9, 0.999)
         )
         scheduler = ReduceLROnPlateau(
             optimizer=optimizer,
             mode='min',
             factor=0.5,
-            patience=5,
+            patience=15,
         )
         return {
             'optimizer': optimizer,
