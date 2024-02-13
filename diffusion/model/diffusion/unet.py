@@ -23,12 +23,12 @@ class SelfAttention(nn.Module):
 
     def forward(self, x):
         B, C, H, W = x.shape
-        x = x.view(B, C, H*W).swapaxes(1, 2)
+        x = x.view(B, C, H*W).permute(0, 2, 1)
         x_ln = self.ln(x)
         attention_value, _ = self.mha(x_ln, x_ln, x_ln)
         attention_value = attention_value + x
         attention_value = self.ff_self(attention_value) + attention_value
-        return attention_value.swapaxes(2, 1).view(B, C, H, W)
+        return attention_value.permute(0, 2, 1).view(B, C, H, W)
 
 
 class DoubleConv(nn.Module):

@@ -45,6 +45,10 @@ def main():
         help='name of the experiment'
     )
     parser.add_argument(
+        '--pbar', action='store_true',
+        help='progress bar'
+    )
+    parser.add_argument(
         '--wandb', '-wk', type=str, default=None,
         help='wandb API key'
     )
@@ -97,8 +101,9 @@ def main():
         callbacks=callback.get_callback(),
         gradient_clip_val=0.5,
         max_epochs=args.max_epochs,
-        enable_progress_bar=False,
-        deterministic=False
+        enable_progress_bar=args.pbar,
+        deterministic=False,
+        precision="bf16-mixed"
     )
 
     # FIT MODEL
