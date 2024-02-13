@@ -107,7 +107,8 @@ def main():
         max_epochs=args.max_epochs,
         enable_progress_bar=args.pbar,
         deterministic=False,
-        precision=args.precision
+        precision=args.precision,
+        strategy='ddp_find_unused_parameters_true'
     )
 
     # FIT MODEL
