@@ -121,7 +121,8 @@ class DiffusionModel(pl.LightningModule):
             {
                 "train_loss": loss
             },
-            sync_dist=True
+            sync_dist=True,
+            on_epoch=True
         )
         return loss
 
@@ -133,7 +134,8 @@ class DiffusionModel(pl.LightningModule):
             {
                 "val_loss": loss
             },
-            sync_dist=True
+            sync_dist=True,
+            on_epoch=True
         )
         return loss
 
