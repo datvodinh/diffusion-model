@@ -1,8 +1,10 @@
 import torch
+import torch.nn as nn
 import pytorch_lightning as pl
 import diffusion
 import wandb
 from torchvision.utils import make_grid
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 class DiffusionModel(pl.LightningModule):
@@ -30,6 +32,8 @@ class DiffusionModel(pl.LightningModule):
         self.alpha_hat = torch.cumprod(1 - self.beta, dim=0)
         self.sqrt_alpha_hat = torch.sqrt(self.alpha_hat)
         self.sqrt_1_minus_alpha_hat = torch.sqrt(1 - self.alpha_hat)
+
+        self.criterion = nn.MSELoss()
 
     def _linear_scheduler(
         self,
@@ -112,7 +116,7 @@ class DiffusionModel(pl.LightningModule):
     def training_step(self, batch, idx):
         x_0, _ = batch
         noise, noise_pred = self(x_0)
-        loss = torch.mean((noise - noise_pred)**2)
+        loss = self.criterion(noise, noise_pred)
         self.log_dict(
             {
                 "train_loss": loss
@@ -124,7 +128,7 @@ class DiffusionModel(pl.LightningModule):
     def validation_step(self, batch, idx):
         x_0, _ = batch
         noise, noise_pred = self(x_0)
-        loss = torch.mean((noise - noise_pred)**2)
+        loss = self.criterion(noise, noise_pred)
         self.log_dict(
             {
                 "val_loss": loss
@@ -134,13 +138,22 @@ class DiffusionModel(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.AdamW(
             params=self.parameters(),
             lr=self.lr,
             betas=(0.9, 0.999)
         )
+        scheduler = ReduceLROnPlateau(
+            optimizer=optimizer,
+            mode='min',
+            factor=0.5,
+            patience=5,
+        )
         return {
-            'optimizer': optimizer
+            'optimizer': optimizer,
+            'lr_scheduler': scheduler,
+            'monitor': 'val_loss',
+            'interval': 'epoch',
         }
 
 

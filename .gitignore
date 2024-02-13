@@ -163,3 +163,4 @@ cython_debug/
 cifar-10-batches-py
 checkpoints
 MNIST
+*.ipynb
