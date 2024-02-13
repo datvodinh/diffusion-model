@@ -22,7 +22,8 @@ class CIFAR10DataModule(pl.LightningDataModule):
         self.transform = transforms.Compose(
             [
                 transforms.Resize((32, 32)),
-                transforms.ToTensor()
+                transforms.ToTensor(),
+                transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
             ]
         )
         self.loader = partial(
@@ -34,15 +35,28 @@ class CIFAR10DataModule(pl.LightningDataModule):
         )
 
     def setup(self, stage: str):
+        cifar_partial = partial(
+            CIFAR10,
+            root=self.data_dir, transform=self.transform, download=True
+        )
         if stage == "fit":
-            cifar_full = CIFAR10(root=self.data_dir, transform=self.transform, train=True, download=True)
+            retrying = True
+            while retrying:
+                try:
+                    cifar_full = cifar_partial(train=True)
+                    retrying = False
+                except:
+                    pass
             self.cifar_train, self.cifar_val = random_split(
                 cifar_full, [0.99, 0.01], generator=torch.Generator().manual_seed(self.seed)
             )
-        elif stage == "test":
-            self.cifar_test = CIFAR10(self.data_dir, train=False, transform=self.transform, download=True)
-        elif stage == "predict":
-            self.cifar_pred = CIFAR10(self.data_dir, train=False, transform=self.transform, download=True)
+        else:
+            retrying = True
+            while retrying:
+                try:
+                    self.cifar_test = cifar_partial(train=False)
+                except:
+                    pass
 
     def train_dataloader(self):
         return self.loader(dataset=self.cifar_train)
@@ -52,6 +66,3 @@ class CIFAR10DataModule(pl.LightningDataModule):
 
     def test_dataloader(self):
         return self.loader(dataset=self.cifar_test)
-
-    def predict_dataloader(self):
-        return self.loader(dataset=self.cifar_pred)
