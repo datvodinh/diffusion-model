@@ -92,7 +92,7 @@ class UpSample(nn.Module):
     ):
         super().__init__()
 
-        self.up = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+        self.up = nn.ConvTranspose2d(in_channels, out_channels, 2, stride=2)
         self.conv = nn.Sequential(
             DoubleConv(in_channels, in_channels, residual=True),
             DoubleConv(in_channels, out_channels, in_channels // 2),
@@ -133,12 +133,11 @@ class UNet(pl.LightningModule):
 
         self.mid1 = DoubleConv(in_channels=256, out_channels=512)
         self.mid2 = DoubleConv(in_channels=512, out_channels=512)
-        self.mid3 = DoubleConv(in_channels=512, out_channels=256)
 
-        self.up1 = UpSample(in_channels=512, out_channels=128)
-        self.sa4 = SelfAttention(channels=128)
-        self.up2 = UpSample(in_channels=256, out_channels=64)
-        self.sa5 = SelfAttention(channels=64)
+        self.up1 = UpSample(in_channels=512, out_channels=256)
+        self.sa4 = SelfAttention(channels=256)
+        self.up2 = UpSample(in_channels=256, out_channels=128)
+        self.sa5 = SelfAttention(channels=128)
         self.up3 = UpSample(in_channels=128, out_channels=64)
         self.sa6 = SelfAttention(channels=64)
         self.outc = nn.Conv2d(64, c_out, kernel_size=1)
@@ -164,14 +163,19 @@ class UNet(pl.LightningModule):
 
         x4 = self.mid1(x4)
         x4 = self.mid2(x4)
-        x4 = self.mid3(x4)
 
         x = self.up1(x4, x3, t)
+        print(x.shape)
         x = self.sa4(x)
+        print(x.shape)
         x = self.up2(x, x2, t)
+        print(x.shape)
         x = self.sa5(x)
+        print(x.shape)
         x = self.up3(x, x1, t)
+        print(x.shape)
         x = self.sa6(x)
+        print(x.shape)
         output = self.outc(x)
         return output
 
