@@ -29,6 +29,10 @@ def main():
         help='batch size'
     )
     parser.add_argument(
+        '--max_batch_size', '-mbs', type=int, default=32,
+        help='max batch size'
+    )
+    parser.add_argument(
         '--lr', '-l', type=float, default=1e-4,
         help='learning rate'
     )
@@ -124,7 +128,7 @@ def main():
         deterministic=False,
         precision=args.precision,
         strategy=strategy,
-        accumulate_grad_batches=max(int(256 / args.batch_size), 1)
+        accumulate_grad_batches=max(int(args.max_batch_size / args.batch_size), 1)
     )
 
     # FIT MODEL
