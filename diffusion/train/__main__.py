@@ -95,9 +95,9 @@ def main():
         default_root_dir=root_path,
         logger=logger,
         callbacks=callback.get_callback(),
-        gradient_clip_val=1.0,
+        gradient_clip_val=0.5,
         max_epochs=args.max_epochs,
-        enable_progress_bar=True,
+        enable_progress_bar=False,
         deterministic=False
     )
 

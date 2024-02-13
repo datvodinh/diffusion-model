@@ -1,6 +1,10 @@
-from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import os
+from pytorch_lightning.callbacks import (
+    ModelCheckpoint,
+    LearningRateMonitor,
+    LearningRateFinder
+)
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 
 class ModelCallback:
@@ -35,7 +39,13 @@ class ModelCallback:
             mode=es_mode
         )
 
+        self.lr_finder = LearningRateFinder(
+            min_lr=1e-6,
+            max_lr=1e-2
+        )
+
     def get_callback(self):
         return [
-            self.ckpt_callback, self.lr_callback, self.early_stop_callback
+            self.ckpt_callback, self.lr_callback,
+            self.early_stop_callback, self.lr_finder
         ]
