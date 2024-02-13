@@ -76,7 +76,9 @@ class DiffusionModel(pl.LightningModule):
     @torch.no_grad()
     def sampling(self, n: int, labels: torch.Tensor, cfg_scale: int = 3):
         print(f"Sampling {n} images!")
-        x_t = torch.randn(n, self.in_channels, self.dim, self.dim, device=self.model.device)
+        x_t = torch.randn(
+            n, self.in_channels, self.dim, self.dim, device=self.model.device
+        )
         self.model.eval()
         for t in range(self.max_timesteps-1, -1, -1):
             time = torch.full((n,), fill_value=t, device=self.model.device)
@@ -103,7 +105,9 @@ class DiffusionModel(pl.LightningModule):
 
     def on_train_epoch_end(self) -> None:
         n = 10
-        labels = torch.randint(low=0, high=self.num_classes, size=(n,))
+        labels = torch.randint(
+            low=0, high=self.num_classes, size=(n,), device=self.model.device
+        )
         x_t = self.sampling(n, labels).cpu()
 
         img_array = [x_t[i] for i in range(x_t.shape[0])]
