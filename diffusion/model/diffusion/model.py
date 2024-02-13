@@ -59,9 +59,6 @@ class DiffusionModel(pl.LightningModule):
         x_0: torch.Tensor,
         t: torch.Tensor
     ):
-        if self.device is None:
-            self.device = x_0.device
-        x_0 = x_0 * 2 - 1  # range [-1,1]
         noise = torch.randn_like(x_0, device=x_0.device)
         mean = self._batch_index_select(self.sqrt_alpha_hat, t, device=x_0.device) * x_0
         std = self._batch_index_select(self.sqrt_1_minus_alpha_hat, t, device=x_0.device) * noise
@@ -79,7 +76,7 @@ class DiffusionModel(pl.LightningModule):
             sqrt_one_minus_alpha_hat = self._batch_index_select(
                 self.sqrt_1_minus_alpha_hat, time, device=self.model.device)
             sqrt_beta = self._batch_index_select(self.sqrt_beta, time, device=self.model.device)
-            noise = torch.rand_like(x_t, device=self.model.device) if (
+            noise = torch.randn_like(x_t, device=self.model.device) if (
                 t > 0
             ) else torch.zeros_like(x_t, device=self.model.device)
 
@@ -94,7 +91,6 @@ class DiffusionModel(pl.LightningModule):
     def on_train_epoch_end(self) -> None:
         x_t = self.sampling(5).cpu()
         img_array = [x_t[i] for i in range(x_t.shape[0])]
-        print(make_grid(img_array).shape)
         wandblog = self.logger.experiment
         wandblog.log(
             {
