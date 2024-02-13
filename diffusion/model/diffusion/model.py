@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 import pytorch_lightning as pl
 import diffusion
 import wandb
@@ -15,16 +16,20 @@ class DiffusionModel(pl.LightningModule):
         beta_1: float = 0.0001,
         beta_2: float = 0.02,
         in_channels: int = 3,
-        dim: int = 32
+        dim: int = 32,
+        num_classes: int | None = 10
     ):
         super().__init__()
-        self.model = diffusion.UNet(
-            c_in=in_channels, c_out=in_channels
+        self.model = diffusion.ConditionalUNet(
+            c_in=in_channels,
+            c_out=in_channels,
+            num_classes=num_classes
         )
         self.lr = lr
         self.max_timesteps = max_timesteps
         self.in_channels = in_channels
         self.dim = dim
+        self.num_classes = num_classes
         self.beta = self._linear_scheduler(max_timesteps, beta_1, beta_2)
         self.sqrt_beta = torch.sqrt(self.beta)
         self.alpha = 1 - self.beta
@@ -64,18 +69,21 @@ class DiffusionModel(pl.LightningModule):
         t: torch.Tensor
     ):
         noise = torch.randn_like(x_0, device=x_0.device)
-        mean = self._batch_index_select(self.sqrt_alpha_hat, t, device=x_0.device) * x_0
-        std = self._batch_index_select(self.sqrt_1_minus_alpha_hat, t, device=x_0.device) * noise
-        return torch.clamp(mean + std, min=-1, max=1), noise
+        new_x = self._batch_index_select(self.sqrt_alpha_hat, t, device=x_0.device) * x_0
+        new_noise = self._batch_index_select(self.sqrt_1_minus_alpha_hat, t, device=x_0.device) * noise
+        return (new_x + new_noise).clamp(-1, 1), noise
 
     @torch.no_grad()
-    def sampling(self, n: int):
+    def sampling(self, n: int, labels: torch.Tensor, cfg_scale: int = 3):
         print(f"Sampling {n} images!")
         x_t = torch.randn(n, self.in_channels, self.dim, self.dim, device=self.model.device)
         self.model.eval()
         for t in range(self.max_timesteps-1, -1, -1):
             time = torch.full((n,), fill_value=t, device=self.model.device)
-            pred_noise = self.model(x_t, time)
+            pred_noise = self.model(x_t, time, labels)
+            if cfg_scale > 0:
+                uncond_pred_noise = self.model(x_t, time)
+                pred_noise = torch.lerp(uncond_pred_noise, pred_noise, cfg_scale)
             sqrt_alpha = self._batch_index_select(self.sqrt_alpha, time, device=self.model.device)
             sqrt_one_minus_alpha_hat = self._batch_index_select(
                 self.sqrt_1_minus_alpha_hat, time, device=self.model.device)
@@ -87,13 +95,17 @@ class DiffusionModel(pl.LightningModule):
             x_t = 1 / sqrt_alpha * (
                 x_t - (1-sqrt_alpha) / sqrt_one_minus_alpha_hat * pred_noise
             ) + sqrt_beta * noise
+            x_t = x_t.clamp(-1, 1)
 
-        x_t = (x_t.clamp(-1, 1) + 1) / 2 * 255.  # range [0,255]
+        x_t = (x_t + 1) / 2 * 255.  # range [0,255]
         self.model.train()
         return x_t.type(torch.uint8)
 
     def on_train_epoch_end(self) -> None:
-        x_t = self.sampling(5).cpu()
+        n = 10
+        labels = torch.randint(low=0, high=self.num_classes, size=(n,))
+        x_t = self.sampling(n, labels).cpu()
+
         img_array = [x_t[i] for i in range(x_t.shape[0])]
         wandblog = self.logger.experiment
         wandblog.log(
@@ -105,17 +117,19 @@ class DiffusionModel(pl.LightningModule):
             }
         )
 
-    def forward(self, x_0):
+    def forward(self, x_0, labels):
         t = torch.randint(
             low=0, high=self.max_timesteps, size=(x_0.shape[0],), device=x_0.device
         )
         x_noise, noise = self.noising(x_0, t)
-        noise_pred = self.model(x_noise, t)
+        noise_pred = self.model(x_noise, t, labels)
         return noise, noise_pred
 
     def training_step(self, batch, idx):
-        x_0, _ = batch
-        noise, noise_pred = self(x_0)
+        x_0, labels = batch
+        if np.random.random() < 0.1:
+            labels = None
+        noise, noise_pred = self(x_0, labels)
         loss = self.criterion(noise, noise_pred)
         self.log_dict(
             {
@@ -127,8 +141,8 @@ class DiffusionModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, idx):
-        x_0, _ = batch
-        noise, noise_pred = self(x_0)
+        x_0, labels = batch
+        noise, noise_pred = self(x_0, labels)
         loss = self.criterion(noise, noise_pred)
         self.log_dict(
             {

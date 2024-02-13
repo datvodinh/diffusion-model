@@ -55,7 +55,7 @@ class DoubleConv(nn.Module):
         if self.residual:
             return F.gelu(x + self.double_conv(x))
         else:
-            return self.double_conv(x)
+            return F.gelu(self.double_conv(x))
 
 
 class DownSample(nn.Module):
@@ -115,7 +115,12 @@ class UpSample(nn.Module):
 
 
 class UNet(pl.LightningModule):
-    def __init__(self, c_in=3, c_out=3, time_dim=256):
+    def __init__(
+        self,
+        c_in: int = 3,
+        c_out: int = 3,
+        time_dim: int = 256
+    ):
         super().__init__()
         self.time_dim = time_dim
         self.inc = DoubleConv(in_channels=c_in, out_channels=64)
@@ -148,10 +153,7 @@ class UNet(pl.LightningModule):
         pos_enc = torch.cat([pos_enc_a, pos_enc_b], dim=-1)
         return pos_enc
 
-    def forward(self, x, t):
-        t = t.unsqueeze(-1).type(torch.float)
-        t = self.pos_encoding(t, self.time_dim)
-
+    def forward_unet(self, x, t):
         x1 = self.inc(x)
         x2 = self.down1(x1, t)
         x2 = self.sa1(x2)
@@ -173,9 +175,43 @@ class UNet(pl.LightningModule):
         output = self.outc(x)
         return output
 
+    def forward(
+        self,
+        x: torch.Tensor,
+        t: torch.Tensor
+    ):
+        t = t.unsqueeze(-1).type(torch.float)
+        t = self.pos_encoding(t, self.time_dim)
+        return self.forward_unet(x, t)
+
+
+class ConditionalUNet(UNet):
+    def __init__(
+        self,
+        c_in: int = 3,
+        c_out: int = 3,
+        time_dim: int = 256,
+        num_classes: int | None = None,
+    ):
+        super().__init__(c_in, c_out, time_dim)
+        if num_classes is not None:
+            self.cls_embed = nn.Embedding(num_classes, time_dim)
+
+    def forward(
+            self,
+            x: torch.Tensor,
+            t: torch.Tensor,
+            label: torch.Tensor | None = None
+    ):
+        t = t.unsqueeze(-1).type(torch.float)
+        t = self.pos_encoding(t, self.time_dim)
+        if label is not None:
+            t += self.cls_embed(label)
+        return self.forward_unet(x, t)
+
 
 if __name__ == '__main__':
-    net = UNet()
+    net = ConditionalUNet()
     print(sum([p.numel() for p in net.parameters()]))
     x = torch.randn(2, 3, 32, 32)
     t = x.new_tensor([500] * x.shape[0]).long()
