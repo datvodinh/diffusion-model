@@ -49,6 +49,10 @@ def main():
         help='progress bar'
     )
     parser.add_argument(
+        '--precision', '-p', type=str, default='32',
+        help='numerical precision'
+    )
+    parser.add_argument(
         '--wandb', '-wk', type=str, default=None,
         help='wandb API key'
     )
@@ -103,7 +107,7 @@ def main():
         max_epochs=args.max_epochs,
         enable_progress_bar=args.pbar,
         deterministic=False,
-        precision="bf16-mixed"
+        precision=args.precision
     )
 
     # FIT MODEL
