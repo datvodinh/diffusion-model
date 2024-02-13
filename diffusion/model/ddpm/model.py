@@ -173,16 +173,8 @@ class DiffusionModel(pl.LightningModule):
             weight_decay=0.1,
             betas=(0.9, 0.999)
         )
-        scheduler = ReduceLROnPlateau(
-            optimizer=optimizer,
-            mode='min',
-            factor=0.5,
-            patience=15,
-        )
         return {
-            'optimizer': optimizer,
-            'lr_scheduler': scheduler,
-            'monitor': 'val_loss'
+            'optimizer': optimizer
         }
 
 
