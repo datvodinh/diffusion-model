@@ -1,2 +1,2 @@
-from .diffusion import *
+from .ddpm import *
 from .ldm import *
