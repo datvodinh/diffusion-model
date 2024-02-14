@@ -81,7 +81,7 @@ def main():
         logger = WandbLogger(
             project="diffusion-model",
             name=name,
-            log_model="all"
+            log_model=False
         )
     else:
         logger = None

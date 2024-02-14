@@ -144,7 +144,8 @@ class DiffusionModel(pl.LightningModule):
         self.log_dict(
             {
                 "train_loss": sum(self.train_loss) / len(self.train_loss)
-            }
+            },
+            sync_dist=True
         )
         self.train_loss.clear()
         self.epoch_count += 1
@@ -174,7 +175,8 @@ class DiffusionModel(pl.LightningModule):
         self.log_dict(
             {
                 "val_loss": sum(self.val_loss) / len(self.val_loss)
-            }
+            },
+            sync_dist=True
         )
         self.val_loss.clear()
 
