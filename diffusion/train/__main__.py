@@ -29,6 +29,10 @@ def main():
         help='batch size'
     )
     parser.add_argument(
+        '--train_ratio', '-tr', type=float, default=0.99,
+        help='batch size'
+    )
+    parser.add_argument(
         '--max_batch_size', '-mbs', type=int, default=32,
         help='max batch size'
     )
@@ -95,7 +99,8 @@ def main():
         data_dir=args.data_dir,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
-        seed=args.seed
+        seed=args.seed,
+        train_ratio=args.train_ratio
     )
 
     # MODEL

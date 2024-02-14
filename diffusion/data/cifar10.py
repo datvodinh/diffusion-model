@@ -12,13 +12,15 @@ class CIFAR10DataModule(pl.LightningDataModule):
         data_dir: str = "./",
         batch_size: int = 32,
         num_workers: int = 0,
-        seed: int = 42
+        seed: int = 42,
+        train_ratio: float = 0.99
     ):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.seed = seed
+        self.train_ratio = min(train_ratio, 0.99)
         self.transform = transforms.Compose(
             [
                 transforms.Resize((32, 32)),
@@ -47,8 +49,10 @@ class CIFAR10DataModule(pl.LightningDataModule):
                     retrying = False
                 except:
                     pass
-            self.cifar_train, self.cifar_val = random_split(
-                cifar_full, [0.99, 0.01], generator=torch.Generator().manual_seed(self.seed)
+            self.cifar_train, self.cifar_val, _ = random_split(
+                dataset=cifar_full,
+                lengths=[self.train_ratio, 0.01, 1 - 0.01 - self.train_ratio],
+                generator=torch.Generator().manual_seed(self.seed)
             )
         else:
             retrying = True
