@@ -99,8 +99,7 @@ def main():
         DATAMODULE = diffusion.MNISTDataModule
     elif args.dataset == "cifar10":
         DATAMODULE = diffusion.CIFAR10DataModule
-    elif args.dataset == "celeba":
-        DATAMODULE = diffusion.CelebADataModule
+
     datamodule = DATAMODULE(
         data_dir=args.data_dir,
         batch_size=args.batch_size,
@@ -122,8 +121,7 @@ def main():
     root_path = os.path.join(os.getcwd(), "checkpoints")
     callback = diffusion.ModelCallback(
         root_path=root_path,
-        ckpt_monitor=args.monitor,
-        es_monitor=args.monitor
+        ckpt_monitor=args.monitor
     )
 
     # STRATEGY

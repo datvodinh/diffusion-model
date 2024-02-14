@@ -1,8 +1,8 @@
 import os
+import diffusion
 from pytorch_lightning.callbacks import (
     ModelCheckpoint,
-    LearningRateMonitor,
-    StochasticWeightAveraging
+    LearningRateMonitor
 )
 
 
@@ -12,8 +12,6 @@ class ModelCallback:
         root_path: str,
         ckpt_monitor: str = "val_loss",
         ckpt_mode: str = "min",
-        es_monitor: str = "loss",
-        es_mode: str = "min"
     ):
         ckpt_path = os.path.join(os.path.join(root_path, "model/"))
         if not os.path.exists(root_path):
@@ -31,11 +29,9 @@ class ModelCallback:
 
         self.lr_callback = LearningRateMonitor("step")
 
-        self.swa = StochasticWeightAveraging(
-            swa_lrs=0.02
-        )
+        self.ema_callback = diffusion.EMACallback(decay=0.995)
 
     def get_callback(self):
         return [
-            self.ckpt_callback, self.lr_callback, self.swa
+            self.ckpt_callback, self.lr_callback, self.ema_callback
         ]
