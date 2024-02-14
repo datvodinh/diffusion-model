@@ -4,7 +4,6 @@ from pytorch_lightning.callbacks import (
     LearningRateMonitor,
     StochasticWeightAveraging
 )
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 
 class ModelCallback:
@@ -32,19 +31,11 @@ class ModelCallback:
 
         self.lr_callback = LearningRateMonitor("step")
 
-        self.early_stop_callback = EarlyStopping(
-            monitor=es_monitor,
-            patience=15,
-            verbose=True,
-            mode=es_mode
-        )
-
         self.swa = StochasticWeightAveraging(
             swa_lrs=0.02
         )
 
     def get_callback(self):
         return [
-            self.ckpt_callback, self.lr_callback,
-            self.early_stop_callback, self.swa
+            self.ckpt_callback, self.lr_callback, self.swa
         ]
