@@ -123,6 +123,12 @@ class UNet(pl.LightningModule):
     ):
         super().__init__()
         self.time_dim = time_dim
+
+        self.time_embed = nn.Sequential(
+            nn.Linear(time_dim, time_dim),
+            nn.SiLU(),
+            nn.Linear(time_dim, time_dim),
+        )
         self.inc = DoubleConv(in_channels=c_in, out_channels=64)
         self.down1 = DownSample(in_channels=64, out_channels=128)
         self.sa1 = SelfAttention(channels=128)
@@ -181,6 +187,7 @@ class UNet(pl.LightningModule):
     ):
         t = t.unsqueeze(-1).type(torch.float)
         t = self.pos_encoding(t, self.time_dim)
+        t = self.time_embed(t)
         return self.forward_unet(x, t)
 
 
@@ -204,6 +211,7 @@ class ConditionalUNet(UNet):
     ):
         t = t.unsqueeze(-1).type(torch.float)
         t = self.pos_encoding(t, self.time_dim)
+        t = self.time_embed(t)
         if label is not None:
             t += self.cls_embed(label)
         return self.forward_unet(x, t)

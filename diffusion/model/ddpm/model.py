@@ -90,7 +90,7 @@ class DiffusionModel(pl.LightningModule):
             n, self.in_channels, self.dim, self.dim, device=self.model.device
         )
         self.model.eval()
-        for t in range(self.max_timesteps-1, -1, -1):
+        for t in range(self.max_timesteps-1, 0, -1):
             time = torch.full((n,), fill_value=t, device=self.model.device)
             pred_noise = self.model(x_t, time, labels)
             if cfg_scale > 0:
@@ -105,14 +105,15 @@ class DiffusionModel(pl.LightningModule):
                 self.sqrt_beta, time, device=self.model.device
             )
             noise = torch.randn_like(x_t, device=self.model.device) if (
-                t > 0
+                t > 1
             ) else torch.zeros_like(x_t, device=self.model.device)
 
             x_t = 1 / sqrt_alpha * (
                 x_t - (1-sqrt_alpha) / sqrt_one_minus_alpha_hat * pred_noise
             ) + sqrt_beta * noise
+            x_t = x_t.clamp(-1, 1)
 
-        x_t = (x_t.clamp(-1, 1) + 1) / 2 * 255.  # range [0,255]
+        x_t = (x_t + 1) / 2 * 255.  # range [0,255]
         self.model.train()
         return x_t.type(torch.uint8)
 
