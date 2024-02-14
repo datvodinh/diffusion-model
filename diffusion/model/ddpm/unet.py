@@ -54,9 +54,9 @@ class DoubleConv(nn.Module):
 
     def forward(self, x):
         if self.residual:
-            return F.gelu(x + self.double_conv(x))
+            return (x + self.double_conv(x)) / 1.414
         else:
-            return F.gelu(self.double_conv(x))
+            return self.double_conv(x)
 
 
 class DownSample(nn.Module):
