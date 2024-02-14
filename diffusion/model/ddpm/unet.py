@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
+from einops import rearrange, repeat
 
 
 class SelfAttention(nn.Module):
@@ -23,12 +24,12 @@ class SelfAttention(nn.Module):
 
     def forward(self, x):
         B, C, H, W = x.shape
-        x = x.view(B, C, H*W).permute(0, 2, 1)
+        x = rearrange(x, 'b c h w -> b (h w) c')
         x_ln = self.ln(x)
         attention_value, _ = self.mha(x_ln, x_ln, x_ln)
         attention_value = attention_value + x
         attention_value = self.ff_self(attention_value) + attention_value
-        return attention_value.permute(0, 2, 1).view(B, C, H, W)
+        return rearrange(attention_value, 'b (h w) c -> b c h w', h=H, w=W)
 
 
 class DoubleConv(nn.Module):
@@ -79,7 +80,8 @@ class DownSample(nn.Module):
 
     def forward(self, x, t):
         x = self.maxpool_conv(x)
-        emb = self.emb_layer(t)[:, :, None, None].repeat(1, 1, x.shape[-2], x.shape[-1])
+        _, _, H, W = x.shape
+        emb = repeat(self.emb_layer(t), 'b d -> b d h w', h=H, w=W)
         return x + emb
 
 
@@ -110,7 +112,8 @@ class UpSample(nn.Module):
         x = self.up(x)
         x = torch.cat([skip_x, x], dim=1)
         x = self.conv(x)
-        emb = self.emb_layer(t)[:, :, None, None].repeat(1, 1, x.shape[-2], x.shape[-1])
+        _, _, H, W = x.shape
+        emb = repeat(self.emb_layer(t), 'b d -> b d h w', h=H, w=W)
         return x + emb
 
 
