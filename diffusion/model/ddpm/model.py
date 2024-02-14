@@ -5,7 +5,6 @@ import pytorch_lightning as pl
 import diffusion
 import wandb
 from torchvision.utils import make_grid
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 class DiffusionModel(pl.LightningModule):
@@ -43,6 +42,8 @@ class DiffusionModel(pl.LightningModule):
 
         self.spe = sample_per_epochs
         self.epoch_count = 0
+        self.train_loss = []
+        self.val_loss = []
 
     def _linear_scheduler(
         self,
@@ -78,7 +79,12 @@ class DiffusionModel(pl.LightningModule):
         return (new_x + new_noise).clamp(-1, 1), noise
 
     @torch.no_grad()
-    def sampling(self, n: int, labels: torch.Tensor, cfg_scale: int = 3):
+    def sampling(
+        self,
+        n: int,
+        labels: torch.Tensor,
+        cfg_scale: int = 3
+    ):
         x_t = torch.randn(
             n, self.in_channels, self.dim, self.dim, device=self.model.device
         )
@@ -89,10 +95,14 @@ class DiffusionModel(pl.LightningModule):
             if cfg_scale > 0:
                 uncond_pred_noise = self.model(x_t, time)
                 pred_noise = torch.lerp(uncond_pred_noise, pred_noise, cfg_scale)
-            sqrt_alpha = self._batch_index_select(self.sqrt_alpha, time, device=self.model.device)
+            sqrt_alpha = self._batch_index_select(
+                self.sqrt_alpha, time, device=self.model.device
+            )
             sqrt_one_minus_alpha_hat = self._batch_index_select(
                 self.sqrt_1_minus_alpha_hat, time, device=self.model.device)
-            sqrt_beta = self._batch_index_select(self.sqrt_beta, time, device=self.model.device)
+            sqrt_beta = self._batch_index_select(
+                self.sqrt_beta, time, device=self.model.device
+            )
             noise = torch.randn_like(x_t, device=self.model.device) if (
                 t > 0
             ) else torch.zeros_like(x_t, device=self.model.device)
@@ -106,7 +116,37 @@ class DiffusionModel(pl.LightningModule):
         self.model.train()
         return x_t.type(torch.uint8)
 
+    def forward(self, x_0, labels):
+        t = torch.randint(
+            low=0, high=self.max_timesteps, size=(x_0.shape[0],), device=x_0.device
+        )
+        x_noise, noise = self.noising(x_0, t)
+        noise_pred = self.model(x_noise, t, labels)
+        return noise, noise_pred
+
+    def training_step(self, batch, idx):
+        x_0, labels = batch
+        if np.random.random() < 0.1:
+            labels = None
+        noise, noise_pred = self(x_0, labels)
+        loss = self.criterion(noise, noise_pred)
+        self.train_loss.append(loss)
+        return loss
+
+    def validation_step(self, batch, idx):
+        x_0, labels = batch
+        noise, noise_pred = self(x_0, labels)
+        loss = self.criterion(noise, noise_pred)
+        self.val_loss.append(loss)
+        return loss
+
     def on_train_epoch_end(self) -> None:
+        self.log_dict(
+            {
+                "train_loss": sum(self.train_loss) / len(self.train_loss)
+            }
+        )
+        self.train_loss.clear()
         self.epoch_count += 1
 
         if self.epoch_count % self.spe == 0:
@@ -130,41 +170,13 @@ class DiffusionModel(pl.LightningModule):
             except:
                 pass
 
-    def forward(self, x_0, labels):
-        t = torch.randint(
-            low=0, high=self.max_timesteps, size=(x_0.shape[0],), device=x_0.device
-        )
-        x_noise, noise = self.noising(x_0, t)
-        noise_pred = self.model(x_noise, t, labels)
-        return noise, noise_pred
-
-    def training_step(self, batch, idx):
-        x_0, labels = batch
-        if np.random.random() < 0.1:
-            labels = None
-        noise, noise_pred = self(x_0, labels)
-        loss = self.criterion(noise, noise_pred)
+    def on_validation_epoch_end(self):
         self.log_dict(
             {
-                "train_loss": loss
-            },
-            sync_dist=True,
-            on_epoch=True
+                "val_loss": sum(self.val_loss) / len(self.val_loss)
+            }
         )
-        return loss
-
-    def validation_step(self, batch, idx):
-        x_0, labels = batch
-        noise, noise_pred = self(x_0, labels)
-        loss = self.criterion(noise, noise_pred)
-        self.log_dict(
-            {
-                "val_loss": loss
-            },
-            sync_dist=True,
-            on_epoch=True
-        )
-        return loss
+        self.val_loss.clear()
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
