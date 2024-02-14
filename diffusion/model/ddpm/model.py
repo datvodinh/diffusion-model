@@ -5,6 +5,7 @@ import pytorch_lightning as pl
 import diffusion
 import wandb
 from torchvision.utils import make_grid
+from torch.optim.lr_scheduler import OneCycleLR
 
 
 class DiffusionModel(pl.LightningModule):
@@ -187,8 +188,15 @@ class DiffusionModel(pl.LightningModule):
             weight_decay=0.1,
             betas=(0.9, 0.999)
         )
+        scheduler = OneCycleLR(
+            optimizer=optimizer,
+            max_lr=self.lr,
+            total_steps=self.trainer.estimated_stepping_batches,
+
+        )
         return {
-            'optimizer': optimizer
+            'optimizer': optimizer,
+            'scheduler': scheduler
         }
 
 

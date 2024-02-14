@@ -17,7 +17,7 @@ def main():
         help='choose dataset'
     )
     parser.add_argument(
-        '--data_dir', '-dd', type=str, default='./',
+        '--data_dir', '-dd', type=str, default='./data/',
         help='model name'
     )
     parser.add_argument(
@@ -31,6 +31,10 @@ def main():
     parser.add_argument(
         '--train_ratio', '-tr', type=float, default=0.99,
         help='batch size'
+    )
+    parser.add_argument(
+        '--timesteps', '-ts', type=int, default=1000,
+        help='max timesteps diffusion'
     )
     parser.add_argument(
         '--max_batch_size', '-mbs', type=int, default=32,
@@ -95,6 +99,8 @@ def main():
         DATAMODULE = diffusion.MNISTDataModule
     elif args.dataset == "cifar10":
         DATAMODULE = diffusion.CIFAR10DataModule
+    elif args.dataset == "celeba":
+        DATAMODULE = diffusion.CelebADataModule
     datamodule = DATAMODULE(
         data_dir=args.data_dir,
         batch_size=args.batch_size,
@@ -108,7 +114,8 @@ def main():
     model = diffusion.DiffusionModel(
         lr=args.lr,
         in_channels=in_channels,
-        sample_per_epochs=args.sample_per_epochs
+        sample_per_epochs=args.sample_per_epochs,
+        max_timesteps=args.timesteps
     )
 
     # CALLBACK
