@@ -196,7 +196,7 @@ class DiffusionModel(pl.LightningModule):
         )
         return {
             'optimizer': optimizer,
-            'scheduler': scheduler
+            'lr_scheduler': scheduler
         }
 
 
