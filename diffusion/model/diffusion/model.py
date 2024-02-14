@@ -6,6 +6,7 @@ import diffusion
 import wandb
 from torchvision.utils import make_grid
 from torch.optim.lr_scheduler import OneCycleLR
+from lightning.pytorch.loggers import WandbLogger
 
 
 class DiffusionModel(pl.LightningModule):
@@ -31,13 +32,10 @@ class DiffusionModel(pl.LightningModule):
         self.in_channels = in_channels
         self.dim = dim
         self.num_classes = num_classes
-        self.beta = self._linear_scheduler(max_timesteps, beta_1, beta_2)
-        self.sqrt_beta = torch.sqrt(self.beta)
-        self.alpha = 1 - self.beta
-        self.sqrt_alpha = torch.sqrt(self.alpha)
-        self.alpha_hat = torch.cumprod(1 - self.beta, dim=0)
-        self.sqrt_alpha_hat = torch.sqrt(self.alpha_hat)
-        self.sqrt_1_minus_alpha_hat = torch.sqrt(1 - self.alpha_hat)
+
+        self.scheduler = diffusion.LinearScheduler(
+            max_timesteps, beta_1, beta_2
+        )
 
         self.criterion = nn.MSELoss()
 
@@ -45,14 +43,6 @@ class DiffusionModel(pl.LightningModule):
         self.epoch_count = 0
         self.train_loss = []
         self.val_loss = []
-
-    def _linear_scheduler(
-        self,
-        max_timesteps: int,
-        beta_1: float = 0.0001,
-        beta_2: float = 0.02
-    ):
-        return torch.linspace(beta_1, beta_2, max_timesteps)
 
     def _batch_index_select(
         self,
@@ -75,47 +65,9 @@ class DiffusionModel(pl.LightningModule):
         t: torch.Tensor
     ):
         noise = torch.randn_like(x_0, device=x_0.device)
-        new_x = self._batch_index_select(self.sqrt_alpha_hat, t, device=x_0.device) * x_0
-        new_noise = self._batch_index_select(self.sqrt_1_minus_alpha_hat, t, device=x_0.device) * noise
+        new_x = self.scheduler.get('sqrt_alpha_hat', t) * x_0
+        new_noise = self.scheduler.get('sqrt_one_minus_alpha_hat', t) * noise
         return new_x + new_noise, noise
-
-    @torch.no_grad()
-    def sampling(
-        self,
-        n: int,
-        labels: torch.Tensor,
-        cfg_scale: int = 3
-    ):
-        x_t = torch.randn(
-            n, self.in_channels, self.dim, self.dim, device=self.model.device
-        )
-        self.model.eval()
-        for t in range(self.max_timesteps-1, 0, -1):
-            time = torch.full((n,), fill_value=t, device=self.model.device)
-            pred_noise = self.model(x_t, time, labels)
-            if cfg_scale > 0:
-                uncond_pred_noise = self.model(x_t, time)
-                pred_noise = torch.lerp(uncond_pred_noise, pred_noise, cfg_scale)
-            sqrt_alpha = self._batch_index_select(
-                self.sqrt_alpha, time, device=self.model.device
-            )
-            sqrt_one_minus_alpha_hat = self._batch_index_select(
-                self.sqrt_1_minus_alpha_hat, time, device=self.model.device)
-            sqrt_beta = self._batch_index_select(
-                self.sqrt_beta, time, device=self.model.device
-            )
-            noise = torch.randn_like(x_t, device=self.model.device) if (
-                t > 1
-            ) else torch.zeros_like(x_t, device=self.model.device)
-
-            x_t = 1 / sqrt_alpha * (
-                x_t - (1-sqrt_alpha) / sqrt_one_minus_alpha_hat * pred_noise
-            ) + sqrt_beta * noise
-            x_t = x_t.clamp(-1, 1)
-
-        x_t = (x_t + 1) / 2 * 255.  # range [0,255]
-        self.model.train()
-        return x_t.type(torch.uint8)
 
     def forward(self, x_0, labels):
         t = torch.randint(
@@ -152,25 +104,27 @@ class DiffusionModel(pl.LightningModule):
         self.epoch_count += 1
 
         if self.epoch_count % self.spe == 0:
-            n = 32
-            labels = torch.randint(
-                low=0, high=self.num_classes, size=(n,), device=self.model.device
-            )
-            x_t = self.sampling(n, labels).cpu()
+            wandblog = self.logger.experiment
+            if isinstance(wandblog, WandbLogger):
+                x_t = diffusion.ddpm_sampling(
+                    model=self.model,
+                    scheduler=self.scheduler,
+                    n_samples=16,
+                    max_timesteps=self.max_timesteps,
+                    in_channels=self.in_channels,
+                    dim=self.dim,
+                    num_classes=self.num_classes
+                )
+                img_array = [x_t[i] for i in range(x_t.shape[0])]
 
-            img_array = [x_t[i] for i in range(x_t.shape[0])]
-            try:
-                wandblog = self.logger.experiment
                 wandblog.log(
                     {
                         "sampling": wandb.Image(
-                            make_grid(img_array).permute(1, 2, 0).numpy(),
+                            make_grid(img_array, nrow=4).permute(1, 2, 0).numpy(),
                             caption="Sampled Image!"
                         )
                     }
                 )
-            except:
-                pass
 
     def on_validation_epoch_end(self):
         self.log_dict(
