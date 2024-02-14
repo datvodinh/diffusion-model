@@ -77,7 +77,7 @@ class DiffusionModel(pl.LightningModule):
         noise = torch.randn_like(x_0, device=x_0.device)
         new_x = self._batch_index_select(self.sqrt_alpha_hat, t, device=x_0.device) * x_0
         new_noise = self._batch_index_select(self.sqrt_1_minus_alpha_hat, t, device=x_0.device) * noise
-        return (new_x + new_noise).clamp(-1, 1), noise
+        return new_x + new_noise, noise
 
     @torch.no_grad()
     def sampling(
@@ -111,9 +111,8 @@ class DiffusionModel(pl.LightningModule):
             x_t = 1 / sqrt_alpha * (
                 x_t - (1-sqrt_alpha) / sqrt_one_minus_alpha_hat * pred_noise
             ) + sqrt_beta * noise
-            x_t = x_t.clamp(-1, 1)
 
-        x_t = (x_t + 1) / 2 * 255.  # range [0,255]
+        x_t = (x_t.clamp(-1, 1) + 1) / 2 * 255.  # range [0,255]
         self.model.train()
         return x_t.type(torch.uint8)
 
