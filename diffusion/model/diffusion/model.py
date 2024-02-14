@@ -103,7 +103,7 @@ class DiffusionModel(pl.LightningModule):
         self.train_loss.clear()
         self.epoch_count += 1
 
-        if self.epoch_count % self.spe == 0:
+        try:
             wandblog = self.logger.experiment
             if isinstance(wandblog, WandbLogger):
                 x_t = diffusion.ddpm_sampling(
@@ -125,6 +125,8 @@ class DiffusionModel(pl.LightningModule):
                         )
                     }
                 )
+        except:
+            pass
 
     def on_validation_epoch_end(self):
         self.log_dict(
@@ -139,7 +141,7 @@ class DiffusionModel(pl.LightningModule):
         optimizer = torch.optim.AdamW(
             params=self.parameters(),
             lr=self.lr,
-            weight_decay=0.1,
+            weight_decay=0.001,
             betas=(0.9, 0.999)
         )
         scheduler = OneCycleLR(

@@ -165,3 +165,4 @@ checkpoints
 MNIST
 *.ipynb
 data
+wandb

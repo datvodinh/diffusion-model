@@ -25,19 +25,18 @@ def ddpm_sampling(
         if cfg_scale > 0:
             uncond_pred_noise = model(x_t, time)
             pred_noise = torch.lerp(uncond_pred_noise, pred_noise, cfg_scale)
+        alpha = scheduler.get('alpha', time)
         sqrt_alpha = scheduler.get('sqrt_alpha', time)
         somah = scheduler.get('sqrt_one_minus_alpha_hat', time)
         sqrt_beta = scheduler.get('sqrt_beta', time)
-        noise = torch.randn_like(x_t, device=model.device) if (
-            t > 1
-        ) else torch.zeros_like(x_t, device=model.device)
+        if t > 1:
+            noise = torch.randn_like(x_t, device=model.device)
+        else:
+            noise = torch.zeros_like(x_t, device=model.device)
 
-        x_t = 1 / sqrt_alpha * (
-            x_t - (1-sqrt_alpha) / somah * pred_noise
-        ) + sqrt_beta * noise
+        x_t = 1 / sqrt_alpha * (x_t - (1-alpha) / somah * pred_noise) + sqrt_beta * noise
         x_t = x_t.clamp(-1, 1)
 
     x_t = (x_t + 1) / 2 * 255.  # range [0,255]
     model.train()
     return x_t.type(torch.uint8)
-
