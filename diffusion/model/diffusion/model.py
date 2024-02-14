@@ -101,32 +101,31 @@ class DiffusionModel(pl.LightningModule):
             sync_dist=True
         )
         self.train_loss.clear()
-        self.epoch_count += 1
-
+    
         try:
             wandblog = self.logger.experiment
-            if isinstance(wandblog, WandbLogger):
-                x_t = diffusion.ddpm_sampling(
-                    model=self.model,
-                    scheduler=self.scheduler,
-                    n_samples=16,
-                    max_timesteps=self.max_timesteps,
-                    in_channels=self.in_channels,
-                    dim=self.dim,
-                    num_classes=self.num_classes
-                )
-                img_array = [x_t[i] for i in range(x_t.shape[0])]
+            x_t = diffusion.ddpm_sampling(
+                model=self.model,
+                scheduler=self.scheduler,
+                n_samples=16,
+                max_timesteps=self.max_timesteps,
+                in_channels=self.in_channels,
+                dim=self.dim,
+                num_classes=self.num_classes
+            )
+            img_array = [x_t[i] for i in range(x_t.shape[0])]
 
-                wandblog.log(
-                    {
-                        "sampling": wandb.Image(
-                            make_grid(img_array, nrow=4).permute(1, 2, 0).numpy(),
-                            caption="Sampled Image!"
-                        )
-                    }
-                )
+            wandblog.log(
+                {
+                    "sampling": wandb.Image(
+                        make_grid(img_array, nrow=4).permute(1, 2, 0).numpy(),
+                        caption="Sampled Image!"
+                    )
+                }
+            )
         except:
             pass
+        self.epoch_count += 1
 
     def on_validation_epoch_end(self):
         self.log_dict(
