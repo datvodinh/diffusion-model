@@ -24,12 +24,12 @@ class SelfAttention(nn.Module):
 
     def forward(self, x):
         B, C, H, W = x.shape
-        x = rearrange(x, 'b c h w -> b (h w) c')
+        x = rearrange(x, 'b c h w -> b (h w) c').contiguous()
         x_ln = self.ln(x)
         attention_value, _ = self.mha(x_ln, x_ln, x_ln)
         attention_value = attention_value + x
         attention_value = self.ff_self(attention_value) + attention_value
-        return rearrange(attention_value, 'b (h w) c -> b c h w', h=H, w=W)
+        return rearrange(attention_value, 'b (h w) c -> b c h w', h=H, w=W).contiguous()
 
 
 class DoubleConv(nn.Module):
@@ -81,7 +81,7 @@ class DownSample(nn.Module):
     def forward(self, x, t):
         x = self.maxpool_conv(x)
         _, _, H, W = x.shape
-        emb = repeat(self.emb_layer(t), 'b d -> b d h w', h=H, w=W)
+        emb = repeat(self.emb_layer(t), 'b d -> b d h w', h=H, w=W).contiguous()
         return x + emb
 
 
@@ -102,10 +102,7 @@ class UpSample(nn.Module):
 
         self.emb_layer = nn.Sequential(
             nn.SiLU(),
-            nn.Linear(
-                emb_dim,
-                out_channels
-            ),
+            nn.Linear(emb_dim, out_channels)
         )
 
     def forward(self, x, skip_x, t):
@@ -113,7 +110,7 @@ class UpSample(nn.Module):
         x = torch.cat([skip_x, x], dim=1)
         x = self.conv(x)
         _, _, H, W = x.shape
-        emb = repeat(self.emb_layer(t), 'b d -> b d h w', h=H, w=W)
+        emb = repeat(self.emb_layer(t), 'b d -> b d h w', h=H, w=W).contiguous()
         return x + emb
 
 
