@@ -1,6 +1,8 @@
 # Simple Diffusion Model
 
-![](./image/diffusion.gif)
+<!-- ![](./image/diffusion.gif) -->
+<img src="./image/diffusion.gif" alt="drawing" width="1000"/>
+<br>
 
 ## Install
 
