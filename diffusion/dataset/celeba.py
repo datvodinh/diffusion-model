@@ -11,12 +11,13 @@ class CelebADataset(Dataset):
     def __init__(
             self,
             data_dir: str,
+            img_dim: int = 64
     ):
         self.list_path = os.listdir(data_dir)
         self.data_dir = data_dir
         self.transform = transforms.Compose(
             [
-                transforms.Resize((64, 64)),
+                transforms.Resize((img_dim, img_dim)),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
             ]
@@ -37,13 +38,15 @@ class CelebADataModule(pl.LightningDataModule):
         batch_size: int = 32,
         num_workers: int = 0,
         seed: int = 42,
-        train_ratio: float = 0.99
+        train_ratio: float = 0.99,
+        img_dim: int = 64
     ):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.train_ratio = min(train_ratio, 0.99)
+        self.img_dim = img_dim
         self.seed = seed
 
         self.loader = partial(
@@ -56,7 +59,7 @@ class CelebADataModule(pl.LightningDataModule):
 
     def setup(self, stage: str):
         if stage == "fit":
-            dataset = CelebADataset(self.data_dir)
+            dataset = CelebADataset(self.data_dir, self.img_dim)
             self.CelebA_train, self.CelebA_val, _ = random_split(
                 dataset=dataset,
                 lengths=[self.train_ratio, 0.01, 1 - 0.01 - self.train_ratio],

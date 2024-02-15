@@ -117,7 +117,8 @@ def main():
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         seed=args.seed,
-        train_ratio=args.train_ratio
+        train_ratio=args.train_ratio,
+        img_dim=img_dim
     )
 
     # MODEL

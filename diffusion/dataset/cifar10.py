@@ -13,7 +13,8 @@ class CIFAR10DataModule(pl.LightningDataModule):
         batch_size: int = 32,
         num_workers: int = 0,
         seed: int = 42,
-        train_ratio: float = 0.99
+        train_ratio: float = 0.99,
+        img_dim: int = 32
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -23,7 +24,7 @@ class CIFAR10DataModule(pl.LightningDataModule):
         self.train_ratio = min(train_ratio, 0.99)
         self.transform = transforms.Compose(
             [
-                transforms.Resize((32, 32)),
+                transforms.Resize((img_dim, img_dim)),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
             ]
