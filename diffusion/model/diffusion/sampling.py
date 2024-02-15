@@ -37,7 +37,6 @@ def ddpm_sampling(
     in_channels: int = 3,
     dim: int = 32,
     cfg_scale: int = 3,
-    demo: bool = True,
     labels=None
 ):
     if labels is not None:
@@ -51,9 +50,32 @@ def ddpm_sampling(
         x_t = ddpm_sampling_timestep(x_t=x_t, model=model, scheduler=scheduler,
                                      labels=labels, t=t, n_samples=n_samples,
                                      cfg_scale=cfg_scale)
-        if demo:
-            yield ((x_t + 1) / 2 * 255).type(torch.uint8)
+
     model.train()
-    if not demo:
-        x_t = (x_t + 1) / 2 * 255.  # range [0,255]
-        return x_t.type(torch.uint8)
+    x_t = (x_t + 1) / 2 * 255.  # range [0,255]
+    return x_t.type(torch.uint8)
+
+
+@torch.no_grad()
+def ddpm_sampling_demo(
+    model,
+    scheduler,
+    n_samples: int = 16,
+    max_timesteps: int = 1000,
+    in_channels: int = 3,
+    dim: int = 32,
+    cfg_scale: int = 3,
+    labels=None
+):
+    if labels is not None:
+        n_samples = labels.shape[0]
+
+    x_t = torch.randn(
+        n_samples, in_channels, dim, dim, device=model.device
+    )
+    model.eval()
+    for t in range(max_timesteps-1, -1, -1):
+        x_t = ddpm_sampling_timestep(x_t=x_t, model=model, scheduler=scheduler,
+                                     labels=labels, t=t, n_samples=n_samples,
+                                     cfg_scale=cfg_scale)
+        yield ((x_t + 1) / 2 * 255).type(torch.uint8)

@@ -43,6 +43,14 @@ class DiffusionModel(pl.LightningModule):
         self.train_loss = []
         self.val_loss = []
 
+        self.sampling_kwargs = {
+            'model': self.model,
+            'scheduler': self.scheduler,
+            'max_timesteps': self.max_timesteps,
+            'in_channels': self.in_channels,
+            'dim': self.dim,
+        }
+
     def _batch_index_select(
         self,
         x: torch.Tensor,
@@ -68,16 +76,18 @@ class DiffusionModel(pl.LightningModule):
         new_noise = self.scheduler.get('sqrt_one_minus_alpha_hat', t) * noise
         return new_x + new_noise, noise
 
-    def sampling(self, labels=None, n_samples: int = 16, demo: bool = False):
+    def sampling(self, labels=None, n_samples: int = 16):
         return diffusion.ddpm_sampling(
-            model=self.model,
-            scheduler=self.scheduler,
             n_samples=n_samples,
-            max_timesteps=self.max_timesteps,
-            in_channels=self.in_channels,
-            dim=self.dim,
-            demo=demo,
-            labels=labels
+            labels=labels,
+            **self.sampling_kwargs
+        )
+
+    def sampling_demo(self, labels=None, n_samples: int = 16):
+        return diffusion.ddpm_sampling_demo(
+            n_samples=n_samples,
+            labels=labels,
+            **self.sampling_kwargs
         )
 
     def forward(self, x_0, labels):
@@ -123,7 +133,7 @@ class DiffusionModel(pl.LightningModule):
 
         if self.epoch_count % self.spe == 0:
             wandblog = self.logger.experiment
-            x_t = self.sampling(n_samples=16, demo=False)
+            x_t = self.sampling(n_samples=16)
             img_array = [x_t[i] for i in range(x_t.shape[0])]
 
             wandblog.log(
