@@ -37,6 +37,7 @@ def ddpm_sampling(
     in_channels: int = 3,
     dim: int = 32,
     cfg_scale: int = 3,
+
     labels=None
 ):
     if labels is not None:

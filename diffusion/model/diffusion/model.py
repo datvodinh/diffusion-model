@@ -18,7 +18,8 @@ class DiffusionModel(pl.LightningModule):
         in_channels: int = 3,
         dim: int = 32,
         num_classes: int | None = 10,
-        sample_per_epochs: int = 50
+        sample_per_epochs: int = 50,
+        n_samples: int = 16
     ):
         super().__init__()
         self.model = diffusion.ConditionalUNet(
@@ -39,6 +40,7 @@ class DiffusionModel(pl.LightningModule):
         self.criterion = nn.MSELoss()
 
         self.spe = sample_per_epochs
+        self.n_samples = n_samples
         self.epoch_count = 0
         self.train_loss = []
         self.val_loss = []
@@ -133,7 +135,7 @@ class DiffusionModel(pl.LightningModule):
 
         if self.epoch_count % self.spe == 0:
             wandblog = self.logger.experiment
-            x_t = self.sampling(n_samples=16)
+            x_t = self.sampling(n_samples=self.n_samples)
             img_array = [x_t[i] for i in range(x_t.shape[0])]
 
             wandblog.log(

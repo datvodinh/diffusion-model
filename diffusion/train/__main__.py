@@ -69,6 +69,10 @@ def main():
         help='sample every n epochs'
     )
     parser.add_argument(
+        '--n_samples', '-ns', type=int, default=4,
+        help='number of workers'
+    )
+    parser.add_argument(
         '--monitor', '-m', type=str, default='val_loss',
         help='callbacks monitor'
     )
@@ -124,7 +128,8 @@ def main():
         sample_per_epochs=args.sample_per_epochs,
         max_timesteps=args.timesteps,
         dim=img_dim,
-        num_classes=num_classes
+        num_classes=num_classes,
+        n_samples=args.n_samples
     )
 
     # CALLBACK
