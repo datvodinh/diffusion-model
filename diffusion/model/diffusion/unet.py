@@ -200,6 +200,7 @@ class ConditionalUNet(UNet):
         num_classes: int | None = None,
     ):
         super().__init__(c_in, c_out, time_dim)
+        self.num_classes = num_classes
         if num_classes is not None:
             self.cls_embed = nn.Embedding(num_classes, time_dim)
 
@@ -212,7 +213,8 @@ class ConditionalUNet(UNet):
         t = t.unsqueeze(-1).type(torch.float)
         t = self.pos_encoding(t, self.time_dim)
         t = self.time_embed(t)
-        if label is not None:
+
+        if label is not None and self.num_classes is not None:
             t += self.cls_embed(label)
         return self.forward_unet(x, t)
 

@@ -97,10 +97,16 @@ def main():
     # DATAMODULE
     if args.dataset == "mnist":
         DATAMODULE = diffusion.MNISTDataModule
+        img_dim = 32
+        num_classes = 10
     elif args.dataset == "cifar10":
         DATAMODULE = diffusion.CIFAR10DataModule
+        img_dim = 32
+        num_classes = 10
     elif args.dataset == "celeba":
         DATAMODULE = diffusion.CelebADataModule
+        img_dim = 64
+        num_classes = None
 
     datamodule = DATAMODULE(
         data_dir=args.data_dir,
@@ -116,7 +122,9 @@ def main():
         lr=args.lr,
         in_channels=in_channels,
         sample_per_epochs=args.sample_per_epochs,
-        max_timesteps=args.timesteps
+        max_timesteps=args.timesteps,
+        dim=img_dim,
+        num_classes=num_classes
     )
 
     # CALLBACK

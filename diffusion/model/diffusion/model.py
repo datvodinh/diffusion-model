@@ -76,7 +76,6 @@ class DiffusionModel(pl.LightningModule):
             max_timesteps=self.max_timesteps,
             in_channels=self.in_channels,
             dim=self.dim,
-            num_classes=self.num_classes,
             demo=demo,
             labels=labels
         )

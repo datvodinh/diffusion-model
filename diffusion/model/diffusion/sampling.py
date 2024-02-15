@@ -36,16 +36,11 @@ def ddpm_sampling(
     max_timesteps: int = 1000,
     in_channels: int = 3,
     dim: int = 32,
-    num_classes: int = 10,
     cfg_scale: int = 3,
     demo: bool = True,
     labels=None
 ):
-    if labels is None:
-        labels = torch.randint(
-            low=0, high=num_classes, size=(n_samples,), device=model.device
-        )
-    else:
+    if labels is not None:
         n_samples = labels.shape[0]
 
     x_t = torch.randn(
