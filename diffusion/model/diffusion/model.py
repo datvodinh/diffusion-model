@@ -103,7 +103,11 @@ class DiffusionModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, idx):
-        x_0, labels = batch
+        if len(batch) > 1:
+            x_0, labels = batch
+        else:
+            x_0 = batch
+            labels = None
         noise, noise_pred = self(x_0, labels)
         loss = self.criterion(noise, noise_pred)
         self.val_loss.append(loss)
