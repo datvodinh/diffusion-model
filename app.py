@@ -7,7 +7,7 @@ from torchvision import transforms
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--ckpt_path", type=str, default="./checkpoints/mnist.ckpt")
-parser.add_argument("--map_location", type=str, default="gpu")
+parser.add_argument("--map_location", type=str, default="cpu")
 parser.add_argument("--share", action='store_true')
 args = parser.parse_args()
 

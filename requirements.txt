@@ -1,0 +1,9 @@
+torch
+torchaudio
+torchvision
+lightning
+wandb
+gradio
+einops
+timm
+tqdm
