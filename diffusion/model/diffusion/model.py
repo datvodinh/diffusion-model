@@ -94,6 +94,7 @@ class DiffusionModel(pl.LightningModule):
             x_0, labels = batch
         else:
             x_0 = batch
+            labels = None
         if np.random.random() < 0.1:
             labels = None
         noise, noise_pred = self(x_0, labels)
