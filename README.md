@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 
 model = diffusion.DiffusionModel.load_from_checkpoint(
-    "./checkpoints/mnist.ckpt", map_location='cpu'
+    "./checkpoints/model/mnist.ckpt", map_location='cpu'
     )
 
 labels = torch.tensor([1,2,3]).to(model.device)
@@ -39,4 +39,13 @@ for img in model.sampling_demo(labels=labels):
         plt.axis('off')
     plt.show()
     clear_output(wait=True)
+```
+
+## Demo
+
+Example:
+
+```bash
+python app.py --ckpt_path ./checkpoints/model/mnist.ckpt \
+            --map_location cpu --share   
 ```
