@@ -90,7 +90,7 @@ class DiffusionModel(pl.LightningModule):
         return noise, noise_pred
 
     def training_step(self, batch, idx):
-        if isinstance(batch, tuple):
+        if len(batch) > 1:
             x_0, labels = batch
         else:
             x_0 = batch
