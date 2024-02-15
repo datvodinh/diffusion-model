@@ -21,6 +21,7 @@ class DiffusionModel(pl.LightningModule):
         sample_per_epochs: int = 50,
         n_samples: int = 16
     ):
+        self.save_hyperparameters()
         super().__init__()
         self.model = diffusion.ConditionalUNet(
             c_in=in_channels,
