@@ -90,11 +90,11 @@ class DiffusionModel(pl.LightningModule):
         return noise, noise_pred
 
     def training_step(self, batch, idx):
-        if len(batch) > 1:
-            x_0, labels = batch
-        else:
+        if isinstance(batch, torch.Tensor):
             x_0 = batch
             labels = None
+        else:
+            x_0, labels = batch
         if np.random.random() < 0.1:
             labels = None
         noise, noise_pred = self(x_0, labels)
@@ -103,11 +103,11 @@ class DiffusionModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, idx):
-        if len(batch) > 1:
-            x_0, labels = batch
-        else:
+        if isinstance(batch, torch.Tensor):
             x_0 = batch
             labels = None
+        else:
+            x_0, labels = batch
         noise, noise_pred = self(x_0, labels)
         loss = self.criterion(noise, noise_pred)
         self.val_loss.append(loss)
