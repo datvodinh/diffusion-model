@@ -24,7 +24,8 @@ class ModelCallback:
             dirpath=ckpt_path,
             filename="model",
             save_top_k=1,
-            mode=ckpt_mode
+            mode=ckpt_mode,
+            save_weights_only=True
         )
 
         self.lr_callback = LearningRateMonitor("step")
