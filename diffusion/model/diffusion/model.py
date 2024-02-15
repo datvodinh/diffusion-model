@@ -6,7 +6,6 @@ import diffusion
 import wandb
 from torchvision.utils import make_grid
 from torch.optim.lr_scheduler import OneCycleLR
-from lightning.pytorch.loggers import WandbLogger
 
 
 class DiffusionModel(pl.LightningModule):
@@ -69,6 +68,19 @@ class DiffusionModel(pl.LightningModule):
         new_noise = self.scheduler.get('sqrt_one_minus_alpha_hat', t) * noise
         return new_x + new_noise, noise
 
+    def sampling(self, labels=None, n_samples: int = 16, demo: bool = False):
+        return diffusion.ddpm_sampling(
+            model=self.model,
+            scheduler=self.scheduler,
+            n_samples=n_samples,
+            max_timesteps=self.max_timesteps,
+            in_channels=self.in_channels,
+            dim=self.dim,
+            num_classes=self.num_classes,
+            demo=demo,
+            labels=labels
+        )
+
     def forward(self, x_0, labels):
         t = torch.randint(
             low=0, high=self.max_timesteps, size=(x_0.shape[0],), device=x_0.device
@@ -104,15 +116,7 @@ class DiffusionModel(pl.LightningModule):
 
         if self.epoch_count % self.spe == 0:
             wandblog = self.logger.experiment
-            x_t = diffusion.ddpm_sampling(
-                model=self.model,
-                scheduler=self.scheduler,
-                n_samples=16,
-                max_timesteps=self.max_timesteps,
-                in_channels=self.in_channels,
-                dim=self.dim,
-                num_classes=self.num_classes
-            )
+            x_t = self.sampling(n_samples=16)
             img_array = [x_t[i] for i in range(x_t.shape[0])]
 
             wandblog.log(
