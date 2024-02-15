@@ -1,3 +1,3 @@
 from .model import *
-from .data import *
+from .dataset import *
 from .utils import *

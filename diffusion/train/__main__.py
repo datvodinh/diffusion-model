@@ -99,6 +99,8 @@ def main():
         DATAMODULE = diffusion.MNISTDataModule
     elif args.dataset == "cifar10":
         DATAMODULE = diffusion.CIFAR10DataModule
+    elif args.dataset == "celeba":
+        DATAMODULE = diffusion.CelebADataModule
 
     datamodule = DATAMODULE(
         data_dir=args.data_dir,
