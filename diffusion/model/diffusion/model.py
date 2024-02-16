@@ -18,6 +18,7 @@ class DiffusionModel(pl.LightningModule):
         beta_1: float = 0.0001,
         beta_2: float = 0.02,
         in_channels: int = 3,
+        mode: str = "ddim",
         dim: int = 32,
         num_classes: int | None = 10,
         sample_per_epochs: int = 50,
@@ -35,14 +36,17 @@ class DiffusionModel(pl.LightningModule):
         self.max_timesteps = max_timesteps
         self.in_channels = in_channels
         self.dim = dim
+        self.mode = mode
         self.num_classes = num_classes
 
-        self.ddpm_scheduler = diffusion.DDPMScheduler(
-            max_timesteps, beta_1, beta_2
-        )
-        self.ddim_scheduler = diffusion.DDIMScheduler(
-            max_timesteps, beta_1, beta_2
-        )
+        if mode == "ddpm":
+            self.scheduler = diffusion.DDPMScheduler(
+                max_timesteps, beta_1, beta_2
+            )
+        elif mode == "ddim":
+            self.scheduler = diffusion.DDIMScheduler(
+                max_timesteps, beta_1, beta_2
+            )
 
         self.criterion = nn.MSELoss()
 
@@ -78,7 +82,7 @@ class DiffusionModel(pl.LightningModule):
         x_0: torch.Tensor,
         t: torch.Tensor
     ):
-        return self.noise_scheduler.noising(x_0, t)
+        return self.scheduler.noising(x_0, t)
 
     def sampling(
         self,
@@ -87,14 +91,10 @@ class DiffusionModel(pl.LightningModule):
         n_samples: int = 16,
         timesteps: int = 1000,
     ):
-        if mode == "ddpm":
-            sched = self.ddpm_scheduler
-        elif mode == "ddim":
-            sched = self.ddim_scheduler
-        return sched.sampling(
+        return self.scheduler.sampling(
             n_samples=n_samples,
             labels=labels,
-            max_timesteps=timesteps,
+            timesteps=timesteps,
             **self.sampling_kwargs
         )
 
@@ -105,14 +105,10 @@ class DiffusionModel(pl.LightningModule):
         n_samples: int = 16,
         timesteps: int = 1000,
     ):
-        if mode == "ddpm":
-            sched = self.ddpm_scheduler
-        elif mode == "ddim":
-            sched = self.ddim_scheduler
-        return sched.sampling_demo(
+        return self.scheduler.sampling_demo(
             n_samples=n_samples,
             labels=labels,
-            max_timesteps=timesteps,
+            timesteps=timesteps,
             **self.sampling_kwargs
         )
 
@@ -130,8 +126,8 @@ class DiffusionModel(pl.LightningModule):
             labels = None
         else:
             x_0, labels = batch
-        if np.random.random() < 0.1:
-            labels = None
+            if np.random.random() < 0.1:
+                labels = None
         noise, noise_pred = self(x_0, labels)
         loss = self.criterion(noise, noise_pred)
         self.train_loss.append(loss)
@@ -157,19 +153,20 @@ class DiffusionModel(pl.LightningModule):
         )
         self.train_loss.clear()
 
-        if self.epoch_count % self.spe == 0:
-            wandblog = self.logger.experiment
-            x_t = self.sampling(n_samples=self.n_samples)
-            img_array = [x_t[i] for i in range(x_t.shape[0])]
+        if self.spe > 0:
+            if self.epoch_count % self.spe == 0:
+                wandblog = self.logger.experiment
+                x_t = self.sampling(n_samples=self.n_samples, timesteps=100)
+                img_array = [x_t[i] for i in range(x_t.shape[0])]
 
-            wandblog.log(
-                {
-                    "sampling": wandb.Image(
-                        make_grid(img_array, nrow=4).permute(1, 2, 0).cpu().numpy(),
-                        caption="Sampled Image!"
-                    )
-                }
-            )
+                wandblog.log(
+                    {
+                        "sampling": wandb.Image(
+                            make_grid(img_array, nrow=4).permute(1, 2, 0).cpu().numpy(),
+                            caption="Sampled Image!"
+                        )
+                    }
+                )
 
         self.epoch_count += 1
 
@@ -197,7 +194,9 @@ class DiffusionModel(pl.LightningModule):
         )
         return {
             'optimizer': optimizer,
-            'lr_scheduler': scheduler
+            'lr_scheduler': scheduler,
+            "interval": "step",
+            "strict": True,
         }
 
     def draw(
@@ -214,7 +213,7 @@ class DiffusionModel(pl.LightningModule):
         demo = sched.sampling_demo(
             n_samples=n_samples,
             labels=labels,
-            max_timesteps=timesteps,
+            timesteps=timesteps,
             **self.sampling_kwargs
         )
         idx = 0

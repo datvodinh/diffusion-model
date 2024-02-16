@@ -21,6 +21,10 @@ def main():
         help='model name'
     )
     parser.add_argument(
+        '--mode', type=str, default='ddim',
+        help='sampling mode'
+    )
+    parser.add_argument(
         '--max_epochs', '-me', type=int, default=200,
         help='max epoch'
     )
@@ -130,7 +134,8 @@ def main():
         max_timesteps=args.timesteps,
         dim=img_dim,
         num_classes=num_classes,
-        n_samples=args.n_samples
+        n_samples=args.n_samples,
+        mode=args.mode
     )
 
     # CALLBACK
