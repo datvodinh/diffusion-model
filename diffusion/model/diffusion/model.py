@@ -196,11 +196,9 @@ class DiffusionModel(pl.LightningModule):
             'optimizer': optimizer,
             'lr_scheduler_config': {
                 "scheduler": scheduler,
-                "interval": "epoch",
+                "interval": "step",
                 "frequency": 1,
-                "monitor": "val_loss",
                 "strict": True,
-                "name": None,
             }
         }
 
