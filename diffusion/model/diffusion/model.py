@@ -194,9 +194,14 @@ class DiffusionModel(pl.LightningModule):
         )
         return {
             'optimizer': optimizer,
-            'lr_scheduler': scheduler,
-            "interval": "step",
-            "strict": True,
+            'lr_scheduler_config': {
+                "scheduler": scheduler,
+                "interval": "epoch",
+                "frequency": 1,
+                "monitor": "val_loss",
+                "strict": True,
+                "name": None,
+            }
         }
 
     def draw(
