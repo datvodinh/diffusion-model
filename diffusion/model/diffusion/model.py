@@ -206,11 +206,7 @@ class DiffusionModel(pl.LightningModule):
         n_samples: int = 1,
         timesteps: int = 1000,
     ):
-        if mode == "ddpm":
-            sched = self.ddpm_scheduler
-        elif mode == "ddim":
-            sched = self.ddim_scheduler
-        demo = sched.sampling_demo(
+        demo = self.scheduler.sampling_demo(
             n_samples=n_samples,
             labels=labels,
             timesteps=timesteps,
