@@ -18,7 +18,7 @@ class DiffusionModel(pl.LightningModule):
         beta_1: float = 0.0001,
         beta_2: float = 0.02,
         in_channels: int = 3,
-        mode: str = "ddim",
+        mode: str = "ddpm",
         dim: int = 32,
         num_classes: int | None = 10,
         sample_per_epochs: int = 50,
@@ -88,29 +88,25 @@ class DiffusionModel(pl.LightningModule):
         self,
         labels=None,
         mode: int = "ddpm",
+        demo: bool = True,
         n_samples: int = 16,
         timesteps: int = 1000,
     ):
-        return self.scheduler.sampling(
-            n_samples=n_samples,
-            labels=labels,
-            timesteps=timesteps,
-            **self.sampling_kwargs
-        )
+        if mode == "ddpm":
+            self.test_scheduler = diffusion.DDPMScheduler(self.max_timesteps)
+        elif mode == "ddim":
+            self.test_scheduler = diffusion.DDIMScheduler(self.max_timesteps)
 
-    def sampling_demo(
-        self,
-        labels=None,
-        mode: int = "ddpm",
-        n_samples: int = 16,
-        timesteps: int = 1000,
-    ):
-        return self.scheduler.sampling_demo(
-            n_samples=n_samples,
-            labels=labels,
-            timesteps=timesteps,
-            **self.sampling_kwargs
-        )
+        kwargs = {
+            "n_samples": n_samples,
+            "labels": labels,
+            "timesteps": timesteps,
+        } | self.sampling_kwargs
+
+        if demo:
+            return self.test_scheduler.sampling_demo(**kwargs)
+        else:
+            return self.test_scheduler.sampling(**kwargs)
 
     def forward(self, x_0, labels):
         t = torch.randint(
@@ -156,7 +152,7 @@ class DiffusionModel(pl.LightningModule):
         if self.spe > 0:
             if self.epoch_count % self.spe == 0:
                 wandblog = self.logger.experiment
-                x_t = self.sampling(n_samples=self.n_samples, timesteps=100)
+                x_t = self.sampling(n_samples=self.n_samples, timesteps=100, demo=False)
                 img_array = [x_t[i] for i in range(x_t.shape[0])]
 
                 wandblog.log(
@@ -192,15 +188,7 @@ class DiffusionModel(pl.LightningModule):
             total_steps=self.trainer.estimated_stepping_batches,
 
         )
-        return {
-            'optimizer': optimizer,
-            'lr_scheduler_config': {
-                "scheduler": scheduler,
-                "interval": "step",
-                "frequency": 1,
-                "strict": True,
-            }
-        }
+        return [optimizer], [scheduler]
 
     def draw(
         self,
@@ -209,9 +197,14 @@ class DiffusionModel(pl.LightningModule):
         n_samples: int = 1,
         timesteps: int = 1000,
     ):
-        demo = self.scheduler.sampling_demo(
+        if mode == "ddpm":
+            self.test_scheduler = diffusion.DDPMScheduler(self.max_timesteps)
+        elif mode == "ddim":
+            self.test_scheduler = diffusion.DDIMScheduler(self.max_timesteps)
+
+        demo = self.test_scheduler.sampling_demo(
             n_samples=n_samples,
-            labels=labels,
+            labels=labels.to(self.device),
             timesteps=timesteps,
             **self.sampling_kwargs
         )
