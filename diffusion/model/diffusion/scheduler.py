@@ -31,8 +31,8 @@ class DDPMScheduler:
         if t.device != x_0.device:
             t = t.to(x_0.device)
         noise = torch.randn_like(x_0, device=x_0.device)
-        new_x = self.sqrt_alpha_hat.to(x_0.device)[t] * x_0
-        new_noise = self.sqrt_one_minus_alpha_hat.to(x_0.device)[t] * noise
+        new_x = self.sqrt_alpha_hat.to(x_0.device)[t][:, None, None, None] * x_0
+        new_noise = self.sqrt_one_minus_alpha_hat.to(x_0.device)[t][:, None, None, None] * noise
         return new_x + new_noise, noise
 
     @torch.no_grad()
