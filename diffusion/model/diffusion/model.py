@@ -109,9 +109,11 @@ class DiffusionModel(pl.LightningModule):
             return self.test_scheduler.sampling(**kwargs)
 
     def forward(self, x_0, labels):
+        n = x_0.shape[0]
         t = torch.randint(
-            low=0, high=self.max_timesteps, size=(x_0.shape[0],), device=x_0.device
+            low=0, high=self.max_timesteps, size=(n//2+1,), device=x_0.device
         )
+        t = torch.cat([t, self.max_timesteps - t - 1], dim=0)[:n]
         x_noise, noise = self.noising(x_0, t)
         noise_pred = self.model(x_noise, t, labels)
         return noise, noise_pred
@@ -197,16 +199,12 @@ class DiffusionModel(pl.LightningModule):
         n_samples: int = 1,
         timesteps: int = 1000,
     ):
-        if mode == "ddpm":
-            self.test_scheduler = diffusion.DDPMScheduler(self.max_timesteps)
-        elif mode == "ddim":
-            self.test_scheduler = diffusion.DDIMScheduler(self.max_timesteps)
-
-        demo = self.test_scheduler.sampling_demo(
+        demo = self.sampling(
+            labels=labels,
+            mode=mode,
             n_samples=n_samples,
-            labels=labels.to(self.device),
             timesteps=timesteps,
-            **self.sampling_kwargs
+            demo=True
         )
         idx = 0
         length = labels.shape[0] if labels is not None else n_samples

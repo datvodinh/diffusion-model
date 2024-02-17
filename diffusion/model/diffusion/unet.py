@@ -45,10 +45,10 @@ class DoubleConv(nn.Module):
             mid_channels = out_channels
         self.double_conv = nn.Sequential(
             nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
-            nn.GroupNorm(8, mid_channels),
+            nn.GroupNorm(32, mid_channels, eps=1e-6, affine=True),
             nn.GELU(),
             nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.GroupNorm(8, out_channels),
+            nn.GroupNorm(32, out_channels, eps=1e-6, affine=True),
         )
 
     def forward(self, x):
@@ -137,15 +137,20 @@ class UNet(pl.LightningModule):
         self.sa3 = SelfAttention(channels=256)
 
         self.mid1 = DoubleConv(in_channels=256, out_channels=512)
+        self.sa4 = SelfAttention(channels=512)
         self.mid2 = DoubleConv(in_channels=512, out_channels=512)
 
         self.up1 = UpSample(in_channels=512, out_channels=256)
-        self.sa4 = SelfAttention(channels=256)
+        self.sa5 = SelfAttention(channels=256)
         self.up2 = UpSample(in_channels=256, out_channels=128)
-        self.sa5 = SelfAttention(channels=128)
+        self.sa6 = SelfAttention(channels=128)
         self.up3 = UpSample(in_channels=128, out_channels=64)
-        self.sa6 = SelfAttention(channels=64)
-        self.outc = nn.Conv2d(64, c_out, kernel_size=1)
+        self.sa7 = SelfAttention(channels=64)
+        self.outc = nn.Sequential(
+            nn.GroupNorm(32, 64, eps=1e-6, affine=True),
+            nn.SiLU(),
+            nn.Conv2d(64, c_out, kernel_size=3, padding=1)
+        )
 
     def pos_encoding(self, t, channels):
         inv_freq = 1.0 / (
@@ -168,14 +173,15 @@ class UNet(pl.LightningModule):
         x4 = self.sa3(x4)
 
         x4 = self.mid1(x4)
+        x4 = self.sa4(x4)
         x4 = self.mid2(x4)
 
         x = self.up1(x4, x3, t)
-        x = self.sa4(x)
-        x = self.up2(x, x2, t)
         x = self.sa5(x)
-        x = self.up3(x, x1, t)
+        x = self.up2(x, x2, t)
         x = self.sa6(x)
+        x = self.up3(x, x1, t)
+        x = self.sa7(x)
         output = self.outc(x)
         return output
 

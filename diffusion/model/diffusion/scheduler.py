@@ -15,10 +15,10 @@ class DDPMScheduler:
 
     def _init_params(self, timesteps: int | None = None):
         self.beta = torch.linspace(self.beta_1, self.beta_2, timesteps or self.max_timesteps)
-        self.sqrt_beta = torch.sqrt(self.beta)[:, None, None, None]
-        self.alpha = (1 - self.beta)[:, None, None, None]
+        self.sqrt_beta = torch.sqrt(self.beta)
+        self.alpha = (1 - self.beta)
         self.sqrt_alpha = torch.sqrt(self.alpha)
-        self.alpha_hat = torch.cumprod(1 - self.beta, dim=0)[:, None, None, None]
+        self.alpha_hat = torch.cumprod(1 - self.beta, dim=0)
         self.sqrt_alpha_hat = torch.sqrt(self.alpha_hat)
         self.sqrt_one_minus_alpha = torch.sqrt(1 - self.alpha)
         self.sqrt_one_minus_alpha_hat = torch.sqrt(1 - self.alpha_hat)
@@ -50,10 +50,10 @@ class DDPMScheduler:
         if cfg_scale > 0 and labels is not None:
             uncond_pred_noise = model(x_t, time, None)
             pred_noise = torch.lerp(uncond_pred_noise, pred_noise, cfg_scale)
-        alpha = self.alpha.to(model.device)[time]
-        sqrt_alpha = self.sqrt_alpha.to(model.device)[time]
-        somah = self.sqrt_one_minus_alpha_hat.to(model.device)[time]
-        sqrt_beta = self.sqrt_beta.to(model.device)[time]
+        alpha = self.alpha.to(model.device)[time][:, None, None, None]
+        sqrt_alpha = self.sqrt_alpha.to(model.device)[time][:, None, None, None]
+        somah = self.sqrt_one_minus_alpha_hat.to(model.device)[time][:, None, None, None]
+        sqrt_beta = self.sqrt_beta.to(model.device)[time][:, None, None, None]
         if t > 1:
             noise = torch.randn_like(x_t, device=model.device)
         else:
@@ -126,16 +126,16 @@ class DDIMScheduler(DDPMScheduler):
 
     def _init_params(self, timesteps: int | None = None):
         self.beta = torch.linspace(self.beta_1, self.beta_2, timesteps or self.max_timesteps)
-        self.sqrt_beta = torch.sqrt(self.beta)[:, None, None, None]
-        self.alpha = (1 - self.beta)[:, None, None, None]
+        self.sqrt_beta = torch.sqrt(self.beta)
+        self.alpha = (1 - self.beta)
         self.sqrt_alpha = torch.sqrt(self.alpha)
-        self.alpha_hat = torch.cumprod(1 - self.beta, dim=0)[:, None, None, None]
+        self.alpha_hat = torch.cumprod(1 - self.beta, dim=0)
         self.sqrt_alpha_hat = torch.sqrt(self.alpha_hat)
         self.sqrt_one_minus_alpha = torch.sqrt(1 - self.alpha)
         self.sqrt_one_minus_alpha_hat = torch.sqrt(1 - self.alpha_hat)
-        self.alpha_hat_prev = torch.cat([torch.tensor([[[[1.]]]]), self.alpha_hat], dim=0)[:-1]
+        self.alpha_hat_prev = torch.cat([torch.tensor([1.]), self.alpha_hat], dim=0)[:-1]
         self.sqrt_alpha_hat_prev = torch.sqrt(self.alpha_hat_prev)
-        self.variance = (1 - self.alpha_hat_prev) / self.sqrt_one_minus_alpha_hat * \
+        self.variance = (1 - self.alpha_hat_prev) / (1 - self.alpha_hat) * \
             (1 - self.alpha_hat / self.alpha_hat_prev)
 
     @torch.no_grad()
@@ -144,17 +144,17 @@ class DDIMScheduler(DDPMScheduler):
         x_t: torch.Tensor, model, t: int,
         labels: torch.Tensor | None = None,
         n_samples: int = 16,
-        eta: float = 1.,
+        eta: float = 0.0,
         *args, **kwargs
     ):
         time = torch.full((n_samples,), fill_value=t, device=model.device)
         pred_noise = model(x_t, time, labels)
 
-        sqrt_alpha_hat_prev = self.sqrt_alpha_hat_prev.to(model.device)[time]
-        sqrt_one_minus_alpha_hat = self.sqrt_one_minus_alpha_hat.to(model.device)[time]
-        sqrt_alpha_hat = self.sqrt_alpha_hat.to(model.device)[time]
-        alpha_hat_prev = self.alpha_hat_prev.to(model.device)[time]
-        posterior_std = torch.sqrt(self.variance)[time] * eta
+        sqrt_alpha_hat_prev = self.sqrt_alpha_hat_prev.to(model.device)[time][:, None, None, None]
+        sqrt_one_minus_alpha_hat = self.sqrt_one_minus_alpha_hat.to(model.device)[time][:, None, None, None]
+        sqrt_alpha_hat = self.sqrt_alpha_hat.to(model.device)[time][:, None, None, None]
+        alpha_hat_prev = self.alpha_hat_prev.to(model.device)[time][:, None, None, None]
+        posterior_std = torch.sqrt(self.variance)[time][:, None, None, None] * eta
 
         if t > 0:
             noise = torch.randn_like(x_t, device=model.device)
@@ -162,8 +162,8 @@ class DDIMScheduler(DDPMScheduler):
             noise = torch.zeros_like(x_t, device=model.device)
 
         x_0_pred = (x_t - sqrt_one_minus_alpha_hat * pred_noise) / sqrt_alpha_hat
-        # x_0_pred = x_0_pred.clamp(-1, 1)
-        x_t_direction = (1 - alpha_hat_prev - posterior_std**2) * pred_noise
+        x_0_pred = x_0_pred.clamp(-1, 1)
+        x_t_direction = torch.sqrt(1. - alpha_hat_prev - posterior_std**2) * pred_noise
         random_noise = posterior_std * noise
         x_t_1 = sqrt_alpha_hat_prev * x_0_pred + x_t_direction + random_noise
 
