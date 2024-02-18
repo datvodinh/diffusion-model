@@ -36,6 +36,5 @@ model.draw(labels=labels,mode='ddim',timesteps=100)
 Example:
 
 ```bash
-python app.py --ckpt_path ./checkpoints/model/mnist.ckpt \
-            --map_location cpu --share   
+python app.py 
 ```
