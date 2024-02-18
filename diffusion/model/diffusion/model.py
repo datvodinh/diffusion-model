@@ -102,7 +102,6 @@ class DiffusionModel(pl.LightningModule):
             "labels": labels,
             "timesteps": timesteps,
         } | self.sampling_kwargs
-
         if demo:
             return self.test_scheduler.sampling_demo(**kwargs)
         else:
@@ -212,11 +211,12 @@ class DiffusionModel(pl.LightningModule):
             for i in range(length):
                 plt.subplot(1, length, i+1)
                 plt.imshow(img[i].permute(1, 2, 0))
-                plt.title(f"{idx+1}/{timesteps}")
                 plt.axis('off')
+            plt.title(f"{idx+1}/{timesteps}")
             idx += 1
             plt.show()
-            clear_output(wait=True)
+            if idx < timesteps:
+                clear_output(wait=True)
 
 
 if __name__ == "__main__":

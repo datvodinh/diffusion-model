@@ -41,6 +41,7 @@ class DDPMScheduler:
         x_t: torch.Tensor,
         model,
         labels: torch.Tensor,
+        timesteps: int,
         t: int,
         n_samples: int = 16,
         cfg_scale: int = 3,
@@ -76,16 +77,17 @@ class DDPMScheduler:
     ):
         if labels is not None:
             n_samples = labels.shape[0]
-
+        model.eval()
         x_t = torch.randn(
             n_samples, in_channels, dim, dim, device=model.device
         )
         step_ratios = self.max_timesteps // timesteps
         all_timesteps = torch.flip(torch.arange(0, timesteps) * step_ratios, dims=(0,))
         for t in all_timesteps:
-            x_t = self.sampling_t(x_t=x_t, model=model, labels=labels, t=t,
+            x_t = self.sampling_t(x_t=x_t, model=model, labels=labels, t=t, timesteps=timesteps,
                                   n_samples=n_samples, cfg_scale=cfg_scale)
-        x_t = (x_t + 1) / 2 * 255.  # range [0,255]
+        model.train()
+        x_t = (x_t.clamp(-1, 1) + 1) / 2 * 255.  # range [0,255]
         return x_t.type(torch.uint8)
 
     @torch.no_grad()
@@ -106,12 +108,13 @@ class DDPMScheduler:
         x_t = torch.randn(
             n_samples, in_channels, dim, dim, device=model.device
         )
+        model.eval()
         step_ratios = self.max_timesteps // timesteps
         all_timesteps = torch.flip(torch.arange(0, timesteps) * step_ratios, dims=(0,))
         for t in all_timesteps:
-            x_t = self.sampling_t(x_t=x_t, model=model, labels=labels, t=t,
+            x_t = self.sampling_t(x_t=x_t, model=model, labels=labels, t=t, timesteps=timesteps,
                                   n_samples=n_samples, cfg_scale=cfg_scale)
-            yield ((x_t + 1) / 2 * 255).type(torch.uint8)
+            yield ((x_t.clamp(-1, 1) + 1) / 2 * 255).type(torch.uint8)
 
 
 class DDIMScheduler(DDPMScheduler):
@@ -134,7 +137,6 @@ class DDIMScheduler(DDPMScheduler):
         self.sqrt_one_minus_alpha = torch.sqrt(1 - self.alpha)
         self.sqrt_one_minus_alpha_hat = torch.sqrt(1 - self.alpha_hat)
         self.alpha_hat_prev = torch.cat([torch.tensor([1.]), self.alpha_hat], dim=0)[:-1]
-        self.sqrt_alpha_hat_prev = torch.sqrt(self.alpha_hat_prev)
         self.variance = (1 - self.alpha_hat_prev) / (1 - self.alpha_hat) * \
             (1 - self.alpha_hat / self.alpha_hat_prev)
 
@@ -142,18 +144,21 @@ class DDIMScheduler(DDPMScheduler):
     def sampling_t(
         self,
         x_t: torch.Tensor, model, t: int,
+        timesteps: int,
         labels: torch.Tensor | None = None,
         n_samples: int = 16,
         eta: float = 0.0,
         *args, **kwargs
     ):
         time = torch.full((n_samples,), fill_value=t, device=model.device)
+        time_prev = time - self.max_timesteps // timesteps
         pred_noise = model(x_t, time, labels)
 
-        sqrt_alpha_hat_prev = self.sqrt_alpha_hat_prev.to(model.device)[time][:, None, None, None]
         sqrt_one_minus_alpha_hat = self.sqrt_one_minus_alpha_hat.to(model.device)[time][:, None, None, None]
         sqrt_alpha_hat = self.sqrt_alpha_hat.to(model.device)[time][:, None, None, None]
-        alpha_hat_prev = self.alpha_hat_prev.to(model.device)[time][:, None, None, None]
+        alpha_hat_prev = self.alpha_hat[time_prev] if time_prev[0] >= 0 else torch.ones_like(time_prev)
+        alpha_hat_prev = alpha_hat_prev.to(model.device)[:, None, None, None]
+        sqrt_alpha_hat_prev = torch.sqrt(alpha_hat_prev)
         posterior_std = torch.sqrt(self.variance)[time][:, None, None, None] * eta
 
         if t > 0:
