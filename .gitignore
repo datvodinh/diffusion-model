@@ -161,8 +161,8 @@ cython_debug/
 *.jpeg
 *.gz
 cifar-10-batches-py
-checkpoints
 MNIST
 *.ipynb
 data
 wandb
+/checkpoints/lightning_logs
