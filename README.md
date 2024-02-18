@@ -28,7 +28,7 @@ model = diffusion.DiffusionModel.load_from_checkpoint(
     "./checkpoints/model/mnist.ckpt", map_location='cpu'
     )
 labels = torch.tensor([8]).to(model.device)
-model.draw(labels=labels,mode='ddpm',timesteps=1000)
+model.draw(labels=labels,mode='ddim',timesteps=100)
 ```
 
 ## Demo
